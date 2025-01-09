@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 5.9.1",
+    "version": ">= 12.5.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -8,16 +8,20 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "preview": {
+      "distribution": "internal"
+    },
     "production": {
-      "ios": {
-        "autoIncrement": true
-      },
-      "android": {
-        "buildType": "app-bundle"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "developerhridoy@gmail.com",
+        "ascAppId": "6740325863",
+        "appleTeamId": "A279Y88R8H"
+      }
+    }
   }
 }

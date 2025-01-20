@@ -7,7 +7,7 @@ const GetStarted = () => {
   const navigation = useNavigation();
 
   const handleCardPress = () => {
-    navigation.navigate("home");
+    navigation.navigate("(tabs)", { screen: "home" });
   };
 
   return (

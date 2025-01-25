@@ -15,7 +15,7 @@ const GetStarted = () => {
       <View>
         <Image
           style={styles.image}
-          source={require("../../../assets/images/rnb_soul.png")}
+          source={require("../../../assets/images/getstarted.jpg")}
         />
 
         <Text style={styles.title}>Welcome to RNB Soul Radio!</Text>

@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +17,8 @@ import {
   FormControlLabelText,
 } from "@/components/ui/form-control";
 import { Input, InputField } from "@/components/ui/input";
+import axios from "axios";
+import { BASE_URL } from "@env";
 
 const Vip = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -25,10 +28,60 @@ const Vip = () => {
   const [phone, setPhone] = React.useState("");
   const [address, setAddress] = React.useState("");
   const [city, setCity] = React.useState("");
+  const [subject, setSubject] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  const api = axios.create({
+    baseURL: BASE_URL,
+    withCredentials: true,
+    timeout: 5000,
+  });
 
   //   Handle Submit Form
-  const handleSubmit = () => {
-    console.log(firstName, lastName, email, phone, address, city);
+  const handleSubmit = async () => {
+    setLoading(true);
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !address ||
+      !city ||
+      !subject
+    ) {
+      Alert.alert("Error", "All fields are required!");
+      return;
+    }
+
+    const formData = {
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      city,
+      subject,
+    };
+
+    try {
+      const response = await api.post("/form", formData);
+
+      Alert.alert("Success", response?.data?.message);
+
+      // Reset form fields
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPhone("");
+      setAddress("");
+      setCity("");
+      setSubject("");
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      Alert.alert("Error", "Failed to send message.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle refresh
@@ -199,6 +252,26 @@ const Vip = () => {
               </Input>
             </FormControl>
 
+            {/* Subject  */}
+            <FormControl
+              size="md"
+              isDisabled={false}
+              isReadOnly={false}
+              isRequired={true}
+            >
+              <FormControlLabel>
+                <FormControlLabelText>Subject</FormControlLabelText>
+              </FormControlLabel>
+              <Input className="my-1">
+                <InputField
+                  type="text"
+                  placeholder="subject"
+                  value={subject}
+                  onChangeText={(text) => setSubject(text)}
+                />
+              </Input>
+            </FormControl>
+
             {/* Phone */}
             <FormControl
               size="md"
@@ -262,7 +335,9 @@ const Vip = () => {
             </FormControl>
 
             <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-              <Text style={styles.buttonText}>Send</Text>
+              <Text style={styles.buttonText}>
+                {loading ? "SENDING..." : "SEND"}
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

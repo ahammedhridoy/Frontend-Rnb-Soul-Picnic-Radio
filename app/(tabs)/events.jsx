@@ -9,27 +9,53 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import axios from "axios";
+import { BASE_URL, BACKEND_URL } from "@env";
 
 const Events = () => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([]);
+
+  const api = axios.create({
+    baseURL: BASE_URL,
+    withCredentials: true,
+    timeout: 5000,
+  });
+
+  // Fetch Events
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/event/all");
+      setEvents(response?.data?.events || []);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    fetchEvents().then(() => setRefreshing(false));
   };
 
   // Handle card press
   const handleCardPress = (url) => {
-    Linking.openURL(`${url}`);
+    if (url) Linking.openURL(url);
   };
+
   return (
     <SafeAreaView style={styles.container}>
-      {refreshing ? (
+      {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#38BF64" />
         </View>
@@ -45,68 +71,28 @@ const Events = () => {
             <Text style={styles.sectionTitle}>Upcoming Events</Text>
           </View>
           <View style={styles.cardContainer}>
-            {/* Card */}
-            <View style={styles.card}>
-              <Image
-                style={styles.image}
-                source={require("../../assets/images/rnb_soul.png")}
-              />
-
-              <Text style={styles.title}>Welcome to RNB Soul Radio!</Text>
-              <Text style={styles.date}>25 April, 2025</Text>
-
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => handleCardPress("")}
-              >
-                <Text style={styles.buttonText}>Buy Tickets</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Card */}
-            <View style={styles.card}>
-              <Image
-                style={styles.image}
-                source={require("../../assets/images/rnb_soul.png")}
-              />
-
-              <Text style={styles.title}>Welcome to RNB Soul Radio!</Text>
-              <Text style={styles.date}>25 April, 2025</Text>
-
-              <TouchableOpacity style={styles.button} onPress={handleCardPress}>
-                <Text style={styles.buttonText}>Buy Tickets</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Card */}
-            <View style={styles.card}>
-              <Image
-                style={styles.image}
-                source={require("../../assets/images/rnb_soul.png")}
-              />
-
-              <Text style={styles.title}>Welcome to RNB Soul Radio!</Text>
-              <Text style={styles.date}>25 April, 2025</Text>
-
-              <TouchableOpacity style={styles.button} onPress={handleCardPress}>
-                <Text style={styles.buttonText}>Buy Tickets</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Card */}
-            <View style={styles.card}>
-              <Image
-                style={styles.image}
-                source={require("../../assets/images/rnb_soul.png")}
-              />
-
-              <Text style={styles.title}>Welcome to RNB Soul Radio!</Text>
-              <Text style={styles.date}>25 April, 2025</Text>
-
-              <TouchableOpacity style={styles.button} onPress={handleCardPress}>
-                <Text style={styles.buttonText}>Buy Tickets</Text>
-              </TouchableOpacity>
-            </View>
+            {events.length > 0 ? (
+              events.map((event, index) => (
+                <View style={styles.card} key={index}>
+                  <Image
+                    style={styles.image}
+                    source={{
+                      uri: `${BACKEND_URL}${event?.image}`,
+                    }}
+                  />
+                  <Text style={styles.title}>{event?.title}</Text>
+                  <Text style={styles.date}>{event?.date}</Text>
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => handleCardPress(event?.url)}
+                  >
+                    <Text style={styles.buttonText}>Buy Tickets</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noEventsText}>No events available.</Text>
+            )}
           </View>
         </ScrollView>
       )}
@@ -139,14 +125,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "semibold",
-    fontFamily: "Poppins",
     textAlign: "center",
     marginTop: 5,
     color: "black",
   },
   date: {
     fontSize: 12,
-    fontFamily: "Poppins",
     textAlign: "center",
     marginTop: 5,
     color: "black",
@@ -155,17 +139,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: "#38BF64",
     borderRadius: 5,
-    width: "80%",
+    width: "100%",
     height: 50,
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
-    width: "100%",
   },
   buttonText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
-    fontFamily: "Poppins",
     color: "#FFFFFF",
     textAlign: "center",
   },
@@ -182,17 +163,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 10,
     overflow: "hidden",
-    boxShadow: "inset 0px -3px 10px 0px rgba(38, 38, 38, 0.20)",
     padding: 5,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    fontFamily: "Poppins",
     textAlign: "center",
     marginTop: 5,
     marginBottom: 10,
     color: "black",
+  },
+  noEventsText: {
+    fontSize: 18,
+    textAlign: "center",
+    color: "gray",
+    marginTop: 20,
   },
 });
 

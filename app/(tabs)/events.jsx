@@ -12,6 +12,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
+import dayjs from "dayjs";
 
 const Events = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -81,7 +82,9 @@ const Events = () => {
                     }}
                   />
                   <Text style={styles.title}>{event?.title}</Text>
-                  <Text style={styles.date}>{event?.date}</Text>
+                  <Text style={styles.date}>
+                    {dayjs(event?.date).format("ddd, DD MMM YYYY")}
+                  </Text>
                   <TouchableOpacity
                     style={styles.button}
                     onPress={() => handleCardPress(event?.url)}

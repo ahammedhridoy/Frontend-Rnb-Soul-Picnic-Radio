@@ -12,7 +12,6 @@ import {
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
-import { BASE_URL, BACKEND_URL } from "@env";
 
 const Events = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -20,9 +19,8 @@ const Events = () => {
   const [events, setEvents] = useState([]);
 
   const api = axios.create({
-    baseURL: BASE_URL,
+    baseURL: "https://api.rnbsouldashboard.com/api/v1",
     withCredentials: true,
-    timeout: 5000,
   });
 
   // Fetch Events
@@ -77,7 +75,9 @@ const Events = () => {
                   <Image
                     style={styles.image}
                     source={{
-                      uri: `${BACKEND_URL}${event?.image}`,
+                      uri: `${"https://api.rnbsouldashboard.com"}${
+                        event?.image
+                      }`,
                     }}
                   />
                   <Text style={styles.title}>{event?.title}</Text>

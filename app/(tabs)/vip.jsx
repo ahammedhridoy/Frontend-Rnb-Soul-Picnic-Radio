@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/form-control";
 import { Input, InputField } from "@/components/ui/input";
 import axios from "axios";
-import { BASE_URL } from "@env";
 
 const Vip = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -32,14 +31,15 @@ const Vip = () => {
   const [loading, setLoading] = React.useState(false);
 
   const api = axios.create({
-    baseURL: BASE_URL,
+    baseURL: "https://api.rnbsouldashboard.com/api/v1",
     withCredentials: true,
-    timeout: 5000,
   });
 
   //   Handle Submit Form
   const handleSubmit = async () => {
     setLoading(true);
+
+    // Validate required fields
     if (
       !firstName ||
       !lastName ||
@@ -50,6 +50,15 @@ const Vip = () => {
       !subject
     ) {
       Alert.alert("Error", "All fields are required!");
+      setLoading(false);
+      return;
+    }
+
+    // Simple email regex for validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Please enter a valid email address.");
+      setLoading(false);
       return;
     }
 
@@ -64,9 +73,15 @@ const Vip = () => {
     };
 
     try {
-      const response = await api.post("/form", formData);
-
-      Alert.alert("Success", response?.data?.message);
+      const response = await api.post("/form", formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      Alert.alert(
+        "Success",
+        response?.data?.message || "Form submitted successfully!"
+      );
 
       // Reset form fields
       setFirstName("");
@@ -77,7 +92,10 @@ const Vip = () => {
       setCity("");
       setSubject("");
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error(
+        "Error submitting form:",
+        error.response ? error.response.data : error
+      );
       Alert.alert("Error", "Failed to send message.");
     } finally {
       setLoading(false);
@@ -336,7 +354,7 @@ const Vip = () => {
 
             <TouchableOpacity style={styles.button} onPress={handleSubmit}>
               <Text style={styles.buttonText}>
-                {loading ? "SENDING..." : "SEND"}
+                {loading ? "SUBMITTING..." : "SUBMIT"}
               </Text>
             </TouchableOpacity>
           </View>

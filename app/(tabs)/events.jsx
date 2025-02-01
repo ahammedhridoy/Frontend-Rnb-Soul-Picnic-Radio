@@ -83,8 +83,9 @@ const Events = () => {
                   />
                   <Text style={styles.title}>{event?.title}</Text>
                   <Text style={styles.date}>
-                    {dayjs(event?.date).format("ddd, DD")}
-                    {dayjs(event?.secondDate).format(" - DD ")}
+                    {dayjs(event?.date).format("ddd, DD ")}
+                    {event?.secondDate &&
+                      ` - ${dayjs(event?.secondDate).format("DD ")}`}
                     {dayjs(event?.date).format("MMM YYYY")}
                   </Text>
                   <TouchableOpacity

@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 export default function HomeLayout() {
   return (
     <Tabs
@@ -24,6 +25,20 @@ export default function HomeLayout() {
           ),
         }}
       />
+      ,
+      <Tabs.Screen
+        name="radio"
+        options={{
+          headerShown: true,
+          title: "Radio",
+          headerStyle: { backgroundColor: "#38BF64" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontFamily: "Poppins-Bold" },
+          tabBarIcon: ({ color }) => (
+            <FontAwesome6 name="radio" size={24} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="events"
         options={{
@@ -34,19 +49,6 @@ export default function HomeLayout() {
           headerTitleStyle: { fontFamily: "Poppins-Bold" },
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="event" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="experience"
-        options={{
-          headerShown: true,
-          title: "Experience",
-          headerStyle: { backgroundColor: "#38BF64" },
-          headerTintColor: "#fff",
-          headerTitleStyle: { fontFamily: "Poppins-Bold" },
-          tabBarIcon: ({ color }) => (
-            <FontAwesome6 name="circle-info" size={24} color={color} />
           ),
         }}
       />
@@ -73,6 +75,19 @@ export default function HomeLayout() {
           headerTitleStyle: { fontFamily: "Poppins-Bold" },
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="message" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          headerShown: true,
+          title: "Settings",
+          headerStyle: { backgroundColor: "#38BF64" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontFamily: "Poppins-Bold" },
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="settings" size={24} color={color} />
           ),
         }}
       />

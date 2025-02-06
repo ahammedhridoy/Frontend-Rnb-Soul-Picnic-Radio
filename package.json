@@ -19,12 +19,14 @@
     "@expo/html-elements": "^0.4.2",
     "@expo/vector-icons": "^14.0.2",
     "@gluestack-ui/accordion": "^1.0.8",
+    "@gluestack-ui/avatar": "^0.1.18",
     "@gluestack-ui/divider": "^0.1.10",
     "@gluestack-ui/form-control": "^0.1.19",
     "@gluestack-ui/icon": "^0.1.25",
     "@gluestack-ui/input": "^0.1.32",
     "@gluestack-ui/nativewind-utils": "^1.0.26",
     "@gluestack-ui/overlay": "^0.1.16",
+    "@gluestack-ui/textarea": "^0.1.24",
     "@gluestack-ui/toast": "^1.0.8",
     "@react-navigation/bottom-tabs": "^7.0.0",
     "@react-navigation/native": "^7.0.0",
@@ -32,6 +34,7 @@
     "babel-plugin-module-resolver": "^5.0.2",
     "dayjs": "^1.11.13",
     "expo": "~52.0.18",
+    "expo-auth-session": "~6.0.3",
     "expo-blur": "~14.0.1",
     "expo-constants": "~17.0.3",
     "expo-font": "~13.0.1",
@@ -59,8 +62,7 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
-    "tailwindcss": "^3.4.17",
-    "expo-auth-session": "~6.0.3"
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

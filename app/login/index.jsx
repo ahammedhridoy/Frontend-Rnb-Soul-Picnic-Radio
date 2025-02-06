@@ -43,7 +43,6 @@ const LoginScreen = () => {
       console.error(JSON.stringify(err, null, 2));
     }
   }, []);
-
   return (
     <SafeAreaView style={styles.container}>
       <View>

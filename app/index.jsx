@@ -11,23 +11,34 @@ import { useEffect, useCallback } from "react";
 
 export default function Index() {
   const { user, isLoaded } = useUser();
+  console.log(user);
 
   // Function to save user data
   const saveUserToDb = useCallback(async () => {
-    console.log("User:", user);
-    if (!user?.fullName) return;
-
+    if (
+      !user?.fullName ||
+      !user?.primaryEmailAddress ||
+      !user?.id ||
+      !user?.imageUrl
+    ) {
+      return;
+    }
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/v1/user/register",
+        "http://192.168.0.197:5000/api/v1/user/register",
         {
-          name: user?.fullName,
-          email: "user?.emailAddress@gmail.com",
+          name: user.fullName,
+          email: user.primaryEmailAddress.emailAddress,
+          userId: user.id,
+          imageUrl: user.imageUrl,
         }
       );
-      console.log("User saved:", res?.data);
+      console.log("User saved successfully:", res?.data);
     } catch (error) {
-      console.error("Failed to save user to DB:", error);
+      console.error("Failed to save user:", error.message);
+      if (error.response) {
+        console.error("Server response:", error.response.data);
+      }
     }
   }, [user]);
 

@@ -11,7 +11,6 @@ import { useEffect, useCallback } from "react";
 
 export default function Index() {
   const { user, isLoaded } = useUser();
-  console.log(user);
 
   // Function to save user data
   const saveUserToDb = useCallback(async () => {
@@ -25,7 +24,7 @@ export default function Index() {
     }
     try {
       const res = await axios.post(
-        "http://192.168.0.197:5000/api/v1/user/register",
+        "http://192.168.0.199:5000/api/v1/user/register",
         {
           name: user.fullName,
           email: user.primaryEmailAddress.emailAddress,

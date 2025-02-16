@@ -6,19 +6,21 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 
 const LikeButton = ({ postId }) => {
   const { user } = useUser();
-  const [likes, setLikes] = useState([]); // Default to an empty array
+  const [likes, setLikes] = useState([]);
   const [liked, setLiked] = useState(false);
 
-  // Fetch latest like count
+  // Fetch latest like count from API
   const fetchLikes = async () => {
+    if (!user?.id) return; // Ensure user is available
+
     try {
       const res = await axios.get(
-        `http://192.168.0.197:5000/api/v1/post/${postId}`
+        `http://192.168.0.199:5000/api/v1/post/${postId}`
       );
 
-      if (res.status === 200 && res.data.likes) {
-        setLikes(res.data.likes || []); // Ensure likes is always an array
-        setLiked(res.data.likes?.includes(user?.id) || false); // Check safely
+      if (res?.status === 200 && Array.isArray(res?.data?.post?.likes)) {
+        setLikes(res?.data?.post?.likes);
+        setLiked(res?.data?.post?.likes.includes(user?.id));
       }
     } catch (error) {
       console.error("Error fetching likes:", error);
@@ -27,18 +29,20 @@ const LikeButton = ({ postId }) => {
 
   useEffect(() => {
     fetchLikes();
-  }, []);
+  }, [user?.id]);
 
   const handleLikeToggle = async () => {
     try {
       const res = await axios.post(
-        `http://192.168.0.197:5000/api/v1/post/${postId}/like`,
+        `http://192.168.0.199:5000/api/v1/post/${postId}/like`,
         { userId: user?.id }
       );
 
-      if (res.status === 200 && res.data.likes) {
-        setLikes(res.data.likes || []); // Ensure likes is an array
-        setLiked(res.data.likes?.includes(user?.id) || false);
+      console.log("Updated likes data:", res.data); // Debugging log
+
+      if (res.status === 200 && Array.isArray(res?.data?.likes)) {
+        setLikes(res?.data?.likes);
+        setLiked(res?.data?.likes.includes(user?.id));
       }
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -58,7 +62,7 @@ const LikeButton = ({ postId }) => {
           <AntDesign name="hearto" size={24} color="green" />
         )}
       </Text>
-      <Text>({likes?.length || 0})</Text>
+      <Text>({likes.length})</Text>
     </TouchableOpacity>
   );
 };

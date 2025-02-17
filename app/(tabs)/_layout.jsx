@@ -1,9 +1,10 @@
-// app/home/_layout.tsx
+// app/(tabs)/_layout.tsx
+
 import { Tabs } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Ionicons from "@expo/vector-icons/Ionicons";
+
 export default function HomeLayout() {
   return (
     <Tabs
@@ -25,7 +26,7 @@ export default function HomeLayout() {
           ),
         }}
       />
-      ,
+
       <Tabs.Screen
         name="radio"
         options={{
@@ -39,6 +40,7 @@ export default function HomeLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="events"
         options={{
@@ -52,6 +54,7 @@ export default function HomeLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="vip"
         options={{
@@ -65,6 +68,7 @@ export default function HomeLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="faq"
         options={{
@@ -78,6 +82,7 @@ export default function HomeLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="settings"
         options={{
@@ -87,7 +92,7 @@ export default function HomeLayout() {
           headerTintColor: "#fff",
           headerTitleStyle: { fontFamily: "Poppins-Bold" },
           tabBarIcon: ({ color }) => (
-            <Ionicons name="settings" size={24} color={color} />
+            <MaterialIcons name="settings" size={24} color={color} />
           ),
         }}
       />

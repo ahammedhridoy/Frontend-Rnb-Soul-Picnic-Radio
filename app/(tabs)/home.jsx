@@ -122,94 +122,94 @@ const Home = () => {
           <ActivityIndicator size="large" color="#38BF64" />
         </View>
       ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <Card
-              key={item.index}
-              size="md"
-              variant="filled"
-              style={styles.card}
-            >
-              <View style={styles.postHeader}>
-                <TouchableOpacity>
-                  <Avatar size="md">
-                    <AvatarImage source={{ uri: item?.author?.imageUrl }} />
-                  </Avatar>
-                </TouchableOpacity>
-                <Heading size="md">{item?.author?.name}</Heading>
-              </View>
-              <Text size="sm" style={styles.postText}>
-                {item?.text}
-              </Text>
-              {item?.images?.map((image, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: `http://192.168.0.199:5000${image}` }}
-                  style={styles.postImage}
-                />
-              ))}
-              <LikeButton
-                postId={item?.id}
-                userId={user?.id}
-                initialLikes={item?.likes}
+        <>
+          <View style={styles.header}>
+            <Textarea size="md" style={styles.textarea}>
+              <TouchableOpacity>
+                <Avatar size="md">
+                  <AvatarImage source={{ uri: user?.imageUrl }} />
+                </Avatar>
+              </TouchableOpacity>
+              <TextareaInput
+                onChangeText={setText}
+                value={text}
+                placeholder="Your text goes here..."
               />
-            </Card>
-          )}
-          ListHeaderComponent={() => (
-            <View style={styles.header}>
-              <Textarea size="md" style={styles.textarea}>
-                <TouchableOpacity>
-                  <Avatar size="md">
-                    <AvatarImage source={{ uri: user?.imageUrl }} />
-                  </Avatar>
-                </TouchableOpacity>
-                <TextareaInput
-                  onChangeText={setText}
-                  value={text}
-                  placeholder="Your text goes here..."
-                />
-              </Textarea>
-              {imageUris.length > 0 && (
-                <View style={styles.imageContainer}>
-                  {imageUris.map((uri, index) => (
-                    <Image
-                      key={index}
-                      source={{ uri }}
-                      style={styles.imagePreview}
-                    />
-                  ))}
-                </View>
-              )}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity onPress={pickImages}>
-                  <Feather
-                    name="image"
-                    size={26}
-                    color="white"
-                    style={styles.iconButton}
+            </Textarea>
+            {imageUris.length > 0 && (
+              <View style={styles.imageContainer}>
+                {imageUris.map((uri, index) => (
+                  <Image
+                    key={index}
+                    source={{ uri }}
+                    style={styles.imagePreview}
                   />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={createPost}>
-                  <Text style={styles.buttonText}>POST</Text>
-                </TouchableOpacity>
+                ))}
               </View>
+            )}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity onPress={pickImages}>
+                <Feather
+                  name="image"
+                  size={26}
+                  color="white"
+                  style={styles.iconButton}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={createPost}>
+                <Text style={styles.buttonText}>POST</Text>
+              </TouchableOpacity>
             </View>
-          )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListFooterComponent={() =>
-            data.length === posts.length ? (
-              <Text style={styles.noMoreText}>No More Posts Available</Text>
-            ) : (
-              <ActivityIndicator size="large" color="#38BF64" />
-            )
-          }
-          onEndReached={() => setIndex(index + 1)}
-          onEndReachedThreshold={0.1}
-        />
+          </View>
+          <FlatList
+            data={data}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <Card
+                key={item.index}
+                size="md"
+                variant="filled"
+                style={styles.card}
+              >
+                <View style={styles.postHeader}>
+                  <TouchableOpacity>
+                    <Avatar size="md">
+                      <AvatarImage source={{ uri: item?.author?.imageUrl }} />
+                    </Avatar>
+                  </TouchableOpacity>
+                  <Heading size="md">{item?.author?.name}</Heading>
+                </View>
+                <Text size="sm" style={styles.postText}>
+                  {item?.text}
+                </Text>
+                {item?.images?.map((image, index) => (
+                  <Image
+                    key={index}
+                    source={{ uri: `http://192.168.0.199:5000${image}` }}
+                    style={styles.postImage}
+                  />
+                ))}
+                <LikeButton
+                  postId={item?.id}
+                  userId={user?.id}
+                  initialLikes={item?.likes}
+                />
+              </Card>
+            )}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListFooterComponent={() =>
+              data.length === posts.length ? (
+                <Text style={styles.noMoreText}>No More Posts Available</Text>
+              ) : (
+                <ActivityIndicator size="large" color="#38BF64" />
+              )
+            }
+            onEndReached={() => setIndex(index + 1)}
+            onEndReachedThreshold={0.1}
+          />
+        </>
       )}
     </SafeAreaView>
   );

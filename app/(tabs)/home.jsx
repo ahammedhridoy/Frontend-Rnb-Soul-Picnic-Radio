@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,19 +16,20 @@ import Feather from "@expo/vector-icons/Feather";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
-import { useUser } from "@clerk/clerk-expo";
+// import { useUser } from "@clerk/clerk-expo";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import LikeButton from "../../components/ui/LikeButton/LikeButton";
+import { GlobalContext } from "../../context/GlobalContext";
 
 const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useUser();
   const [text, setText] = useState("");
   const [imageUris, setImageUris] = useState([]);
   const [posts, setPosts] = useState([]);
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
+  const { user } = useContext(GlobalContext);
 
   useEffect(() => {
     const value = 20 + 20 * index;
@@ -48,6 +49,7 @@ const Home = () => {
     }
   };
 
+  // Create Post
   const createPost = async () => {
     if (!user) return console.error("User not logged in.");
 
@@ -56,7 +58,7 @@ const Home = () => {
 
     try {
       const formData = new FormData();
-      formData.append("userId", user?.id);
+      formData.append("userId", user.id);
       formData.append("text", text || "");
 
       imageUris.forEach((uri, index) => {
@@ -87,6 +89,7 @@ const Home = () => {
     }
   };
 
+  // Get Posts
   const getPosts = async () => {
     try {
       const res = await axios.get("http://192.168.0.199:5000/api/v1/post/all");
@@ -127,7 +130,11 @@ const Home = () => {
             <Textarea size="md" style={styles.textarea}>
               <TouchableOpacity>
                 <Avatar size="md">
-                  <AvatarImage source={{ uri: user?.imageUrl }} />
+                  <AvatarImage
+                    source={{
+                      uri: `http://192.168.0.199:5000${user?.imageUrl}`,
+                    }}
+                  />
                 </Avatar>
               </TouchableOpacity>
               <TextareaInput

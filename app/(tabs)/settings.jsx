@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -13,12 +13,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useUser } from "@clerk/clerk-expo";
 import axios from "axios";
 import LikeButton from "../../components/ui/LikeButton/LikeButton";
 import {
@@ -30,42 +29,36 @@ import {
 import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import * as ImagePicker from "expo-image-picker";
 import Feather from "@expo/vector-icons/Feather";
-import { useClerk } from "@clerk/clerk-expo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GlobalContext } from "../../context/GlobalContext";
 const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useUser();
   const [posts, setPosts] = useState([]);
   const [postId, setPostId] = useState(null);
   const [text, setText] = useState("");
   const [imageUris, setImageUris] = useState([]);
-  const { signOut } = useClerk();
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
+  const { user, setUser } = useContext(GlobalContext);
 
   const [showAlertDialog, setShowAlertDialog] = React.useState(false);
   const handleClose = () => setShowAlertDialog(false);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const handleCloseDelete = () => setShowDeleteDialog(false);
-
-  // Use useMemo to memoize filtered posts
-  const filteredPost = useMemo(
-    () => posts.filter((post) => post?.userId === user?.id),
-    [posts, user?.id]
-  );
+  const router = useRouter();
 
   useEffect(() => {
     const value = 20 + 20 * index;
-    setData(filteredPost.slice(0, value));
-  }, [index, filteredPost]);
+    setData(posts.slice(0, value));
+  }, [index, posts]);
 
   // Signout the user
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.replace("/");
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
-    }
+    await AsyncStorage.removeItem("user");
+    await AsyncStorage.removeItem("accessToken");
+    await AsyncStorage.removeItem("accessTokenExp");
+    setUser(null);
+    router.replace("/login");
   };
 
   const pickImages = async () => {
@@ -84,20 +77,29 @@ const Settings = () => {
   };
 
   // Get posts
-  const getPosts = async () => {
+  const getUserPosts = async (userId) => {
     try {
-      const res = await axios.get("http://192.168.0.199:5000/api/v1/post/all");
+      const res = await axios.get(
+        `http://192.168.0.199:5000/api/v1/post/${userId}`
+      );
 
       if (res?.status === 200) {
         setPosts(res?.data?.posts);
       }
     } catch (error) {
       console.error(
-        "Error creating post:",
+        "Error fetching user's posts:",
         error.response?.data || error.message
       );
     }
   };
+
+  // Usage Example (Pass the user ID)
+  useEffect(() => {
+    if (user) {
+      getUserPosts(user.id);
+    }
+  }, [user]);
 
   // Set Post Id
   const handleSetPostId = (post) => {
@@ -144,7 +146,7 @@ const Settings = () => {
 
       if (res.status === 200) {
         Alert.alert("Post updated successfully");
-        getPosts();
+        await getUserPosts(user.id);
         setShowAlertDialog(false);
       }
     } catch (error) {
@@ -161,7 +163,7 @@ const Settings = () => {
 
       if (res?.status === 200) {
         Alert.alert("Post deleted successfully");
-        await getPosts(); // Wait for posts to update
+        await getUserPosts(user.id); // Wait for posts to update
         setShowDeleteDialog(false); // Close delete dialog after posts are updated
       }
     } catch (error) {
@@ -169,14 +171,10 @@ const Settings = () => {
     }
   };
 
-  useEffect(() => {
-    getPosts();
-  }, []);
-
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
-    getPosts();
+    getUserPosts(user.id);
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
@@ -201,7 +199,7 @@ const Settings = () => {
             <View>
               {/* Post card */}
 
-              {filteredPost && (
+              {posts && (
                 <>
                   <FlatList
                     data={data}

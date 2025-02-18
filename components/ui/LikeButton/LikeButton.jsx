@@ -1,17 +1,17 @@
-import { useUser } from "@clerk/clerk-expo";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { TouchableOpacity, Text } from "react-native";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { GlobalContext } from "../../../context/GlobalContext";
 
 const LikeButton = ({ postId }) => {
-  const { user } = useUser();
   const [likes, setLikes] = useState([]);
   const [liked, setLiked] = useState(false);
+  const { user } = useContext(GlobalContext);
 
   // Fetch latest like count from API
   const fetchLikes = async () => {
-    if (!user?.id) return; // Ensure user is available
+    if (!user?.id) return;
 
     try {
       const res = await axios.get(
@@ -34,11 +34,9 @@ const LikeButton = ({ postId }) => {
   const handleLikeToggle = async () => {
     try {
       const res = await axios.post(
-        `http://192.168.0.199:5000/api/v1/post/${postId}/like`,
+        `http://192.168.0.199:5000/api/v1/post/${postId}/likes`,
         { userId: user?.id }
       );
-
-      console.log("Updated likes data:", res.data); // Debugging log
 
       if (res.status === 200 && Array.isArray(res?.data?.likes)) {
         setLikes(res?.data?.likes);

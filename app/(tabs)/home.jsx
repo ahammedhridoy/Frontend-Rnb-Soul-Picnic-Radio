@@ -181,7 +181,11 @@ const Home = () => {
                 <View style={styles.postHeader}>
                   <TouchableOpacity>
                     <Avatar size="md">
-                      <AvatarImage source={{ uri: item?.author?.imageUrl }} />
+                      <AvatarImage
+                        source={{
+                          uri: `http://192.168.0.199:5000${item?.author?.imageUrl}`,
+                        }}
+                      />
                     </Avatar>
                   </TouchableOpacity>
                   <Heading size="md">{item?.author?.name}</Heading>

@@ -4,13 +4,14 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   RefreshControl,
   ActivityIndicator,
   Image,
   Alert,
   FlatList,
 } from "react-native";
+import { FormControl } from "@/components/ui/form-control";
+import { Input, InputField } from "@/components/ui/input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { router, useRouter } from "expo-router";
@@ -40,12 +41,30 @@ const Settings = () => {
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
   const { user, setUser } = useContext(GlobalContext);
+  const [firstName, setFirstName] = React.useState(user?.firstName);
+  const [lastName, setLastName] = React.useState(user?.lastName);
+  const [email, setEmail] = React.useState(user?.email);
+  const [password, setPassword] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
 
   const [showAlertDialog, setShowAlertDialog] = React.useState(false);
   const handleClose = () => setShowAlertDialog(false);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const handleCloseDelete = () => setShowDeleteDialog(false);
   const router = useRouter();
+  const [imageUri, setImageUri] = useState(null);
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
 
   useEffect(() => {
     const value = 20 + 20 * index;
@@ -61,6 +80,7 @@ const Settings = () => {
     router.replace("/login");
   };
 
+  // Pick user profile picture
   const pickImages = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -76,11 +96,83 @@ const Settings = () => {
     }
   };
 
+  // Update User
+  const handleSubmit = async () => {
+    setLoading(true);
+    // Validate required fields
+    if (!firstName || !lastName || !email) {
+      Alert.alert("Error", "All fields are required!");
+      setLoading(false);
+      return;
+    }
+
+    // Simple email regex for validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+
+    if (password && password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters long.");
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("firstName", firstName);
+    formData.append("lastName", lastName);
+    formData.append("email", email);
+
+    if (password) {
+      formData.append("password", password);
+    }
+
+    if (imageUri) {
+      const fileName = imageUri.split("/").pop();
+      formData.append("imageUrl", {
+        uri: imageUri,
+        name: fileName,
+        type: "image/jpeg",
+      });
+    }
+
+    try {
+      const response = await axios.patch(
+        `http://192.168.0.199:5000/api/v1/user/update/single/${user?.id}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response?.status === 200) {
+        Alert.alert("Success", "User Updated Successfully!");
+      }
+    } catch (error) {
+      console.error(
+        "Error submitting form:",
+        error.response ? error.response.data : error
+      );
+      Alert.alert("Failed to update user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Get posts
-  const getUserPosts = async (userId) => {
+  const getUserPosts = async () => {
+    if (!user?.id) {
+      console.error("User ID is undefined!");
+      return;
+    }
+
     try {
       const res = await axios.get(
-        `http://192.168.0.199:5000/api/v1/post/${userId}`
+        `http://192.168.0.199:5000/api/v1/post/user/${user?.id}`
       );
 
       if (res?.status === 200) {
@@ -216,13 +308,13 @@ const Settings = () => {
                             <Avatar size="md">
                               <AvatarImage
                                 source={{
-                                  uri: item?.author?.imageUrl,
+                                  uri: `http://192.168.0.199:5000${item?.author?.imageUrl}`,
                                 }}
                               />
                             </Avatar>
                           </TouchableOpacity>
                           <Heading size="md" className="mb-1">
-                            {item?.author?.name}
+                            {item?.author?.firstName} {item?.author?.lastName}
                           </Heading>
                         </View>
                         <View>
@@ -376,24 +468,128 @@ const Settings = () => {
                       <>
                         {/* Info */}
                         <View className="flex items-center gap-2">
-                          <TouchableOpacity>
-                            <Avatar size="2xl">
-                              <AvatarImage
-                                source={{
-                                  uri: user?.imageUrl,
-                                }}
-                              />
-                            </Avatar>
-                          </TouchableOpacity>
-                          <Heading size="xl" className="mb-1">
-                            {user?.fullName}
-                          </Heading>
                           <TouchableOpacity
-                            style={styles.button}
+                            style={styles.logoutButton}
                             onPress={handleSignOut}
                           >
                             <Text style={styles.buttonText}>Logout</Text>
                           </TouchableOpacity>
+                          <TouchableOpacity className="relative">
+                            {imageUri ? (
+                              <>
+                                <View style={{ marginTop: 10 }}>
+                                  <Image
+                                    source={{ uri: imageUri }}
+                                    style={{
+                                      width: 200,
+                                      height: 200,
+                                      borderRadius: 100,
+                                    }}
+                                  />
+                                </View>
+                              </>
+                            ) : (
+                              <Avatar size="2xl">
+                                <AvatarImage
+                                  source={{
+                                    uri: `http://192.168.0.199:5000${user?.imageUrl}`,
+                                  }}
+                                />
+                              </Avatar>
+                            )}
+
+                            {/* Camera icon */}
+                            <TouchableOpacity onPress={pickImage}>
+                              <Image
+                                source={require("../../assets/images/cam.png")}
+                                className=""
+                                style={styles.cameraIcon}
+                              />
+                            </TouchableOpacity>
+
+                            {/* First Name */}
+                            <FormControl
+                              className="mt-4"
+                              size="md"
+                              isDisabled={false}
+                              isReadOnly={false}
+                              isRequired={true}
+                            >
+                              <Input className="w-full my-1">
+                                <InputField
+                                  className="w-full"
+                                  type="text"
+                                  placeholder="first name"
+                                  value={firstName}
+                                  onChangeText={(text) => setFirstName(text)}
+                                />
+                              </Input>
+                            </FormControl>
+
+                            {/* Last Name */}
+                            <FormControl
+                              size="md"
+                              isDisabled={false}
+                              isReadOnly={false}
+                              isRequired={true}
+                            >
+                              <Input className="my-1">
+                                <InputField
+                                  type="text"
+                                  placeholder="last name"
+                                  value={lastName}
+                                  onChangeText={(text) => setLastName(text)}
+                                />
+                              </Input>
+                            </FormControl>
+
+                            {/* Email  */}
+                            <FormControl
+                              size="md"
+                              isDisabled={false}
+                              isReadOnly={false}
+                              isRequired={true}
+                            >
+                              <Input className="my-1">
+                                <InputField
+                                  type="email"
+                                  placeholder="email address"
+                                  value={email}
+                                  onChangeText={(text) => setEmail(text)}
+                                />
+                              </Input>
+                            </FormControl>
+
+                            {/* Password  */}
+                            <FormControl
+                              size="md"
+                              isDisabled={false}
+                              isReadOnly={false}
+                              isRequired={true}
+                            >
+                              <Input className="my-1">
+                                <InputField
+                                  type="password"
+                                  placeholder="password"
+                                  value={password}
+                                  onChangeText={(text) => setPassword(text)}
+                                />
+                              </Input>
+                            </FormControl>
+
+                            {/* Upload Button */}
+                            <TouchableOpacity
+                              style={styles.uploadButton}
+                              onPress={handleSubmit}
+                            >
+                              <Text style={styles.buttonText}>
+                                {loading ? "Updating..." : "Update Info"}
+                              </Text>
+                            </TouchableOpacity>
+                          </TouchableOpacity>
+                          <Heading size="xl" className="mb-1">
+                            {user?.firstName} {user?.lastName}
+                          </Heading>
                         </View>
                       </>
                     )}
@@ -448,6 +644,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "center",
   },
+  uploadButton: {
+    backgroundColor: "#38BF64",
+    borderRadius: 5,
+    width: "45%",
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    paddingRight: 10,
+    paddingLeft: 10,
+    marginTop: 10,
+  },
+  logoutButton: {
+    backgroundColor: "#38BF64",
+    borderRadius: 50,
+    width: "25%",
+    justifyContent: "flex-end",
+    alignSelf: "flex-end",
+    paddingTop: 5,
+    paddingBottom: 5,
+  },
   buttonText: {
     fontSize: 18,
     fontWeight: "bold",
@@ -476,6 +693,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   noMoreText: { textAlign: "center", marginTop: 10, fontWeight: "bold" },
+  cameraIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    position: "absolute",
+    bottom: 60,
+    right: 0,
+  },
 });
 
 export default Settings;

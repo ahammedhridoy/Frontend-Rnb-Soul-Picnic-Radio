@@ -4,6 +4,7 @@ import { Tabs } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AntDesign from "@expo/vector-icons/AntDesign";
 
 export default function HomeLayout() {
   return (
@@ -79,6 +80,20 @@ export default function HomeLayout() {
           headerTitleStyle: { fontFamily: "Poppins-Bold" },
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="message" size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          headerShown: true,
+          title: "Profile",
+          headerStyle: { backgroundColor: "#38BF64" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontFamily: "Poppins-Bold" },
+          tabBarIcon: ({ color }) => (
+            <AntDesign name="profile" size={24} color={color} />
           ),
         }}
       />

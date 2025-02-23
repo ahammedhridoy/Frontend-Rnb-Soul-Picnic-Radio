@@ -6,26 +6,26 @@ export const GlobalContext = createContext(null);
 
 export const GlobalContextProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(undefined);
+  const [user, setUser] = useState(null);
+
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      const userData = await AsyncStorage.getItem("user");
+      if (userData) {
+        setUser(JSON.parse(userData));
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Error retrieving data:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const userData = await AsyncStorage.getItem("user");
-        if (userData) {
-          setUser(JSON.parse(userData));
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Error retrieving data:", error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUser();
   }, []);
 
@@ -36,6 +36,7 @@ export const GlobalContextProvider = ({ children }) => {
         setLoading,
         user,
         setUser,
+        fetchUser,
       }}
     >
       {children}

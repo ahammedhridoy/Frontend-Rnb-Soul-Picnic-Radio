@@ -9,50 +9,40 @@ import {
   Image,
   Alert,
   FlatList,
+  ScrollView,
 } from "react-native";
 import { FormControl } from "@/components/ui/form-control";
 import { Input, InputField } from "@/components/ui/input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { router, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Card } from "@/components/ui/card";
-import { Heading } from "@/components/ui/heading";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+
 import axios from "axios";
-import LikeButton from "../../components/ui/LikeButton/LikeButton";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogBackdrop,
-} from "@/components/ui/alert-dialog";
-import { Textarea, TextareaInput } from "@/components/ui/textarea";
+
 import * as ImagePicker from "expo-image-picker";
-import Feather from "@expo/vector-icons/Feather";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GlobalContext } from "../../context/GlobalContext";
 const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [posts, setPosts] = useState([]);
-  const [postId, setPostId] = useState(null);
-  const [text, setText] = useState("");
-  const [imageUris, setImageUris] = useState([]);
-  const [index, setIndex] = useState(0);
-  const [data, setData] = useState([]);
-  const { user, setUser } = useContext(GlobalContext);
+  const { user, setUser, fetchUser } = useContext(GlobalContext);
   const [firstName, setFirstName] = React.useState(user?.firstName);
   const [lastName, setLastName] = React.useState(user?.lastName);
   const [email, setEmail] = React.useState(user?.email);
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-  const [showAlertDialog, setShowAlertDialog] = React.useState(false);
-  const handleClose = () => setShowAlertDialog(false);
-  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-  const handleCloseDelete = () => setShowDeleteDialog(false);
   const router = useRouter();
   const [imageUri, setImageUri] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+      setEmail(user.email || "");
+    }
+  }, [user]);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -66,11 +56,6 @@ const Settings = () => {
     }
   };
 
-  useEffect(() => {
-    const value = 20 + 20 * index;
-    setData(posts.slice(0, value));
-  }, [index, posts]);
-
   // Signout the user
   const handleSignOut = async () => {
     await AsyncStorage.removeItem("user");
@@ -80,33 +65,16 @@ const Settings = () => {
     router.replace("/login");
   };
 
-  // Pick user profile picture
-  const pickImages = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      const selectedUris = result.assets.map((asset) => asset.uri);
-
-      // Clear the previous images when selecting new ones
-      setImageUris(selectedUris);
-    }
-  };
-
   // Update User
   const handleSubmit = async () => {
     setLoading(true);
-    // Validate required fields
+
     if (!firstName || !lastName || !email) {
       Alert.alert("Error", "All fields are required!");
       setLoading(false);
       return;
     }
 
-    // Simple email regex for validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Error", "Please enter a valid email address.");
@@ -140,7 +108,7 @@ const Settings = () => {
 
     try {
       const response = await axios.patch(
-        `http://192.168.0.199:5000/api/v1/user/update/single/${user?.id}`,
+        `http://192.168.0.197:5000/api/v1/user/update/single/${user?.id}`,
         formData,
         {
           headers: {
@@ -151,6 +119,16 @@ const Settings = () => {
 
       if (response?.status === 200) {
         Alert.alert("Success", "User Updated Successfully!");
+
+        // Update user state
+        const updatedUser = response.data.user;
+        setUser(updatedUser);
+
+        // Store the updated user in AsyncStorage
+        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
+        // Fetch user again to ensure the latest data is loaded
+        fetchUser();
       }
     } catch (error) {
       console.error(
@@ -172,7 +150,7 @@ const Settings = () => {
 
     try {
       const res = await axios.get(
-        `http://192.168.0.199:5000/api/v1/post/user/${user?.id}`
+        `http://192.168.0.197:5000/api/v1/post/user/${user?.id}`
       );
 
       if (res?.status === 200) {
@@ -193,23 +171,6 @@ const Settings = () => {
     }
   }, [user]);
 
-  // Set Post Id
-  const handleSetPostId = (post) => {
-    setPostId(post?.id);
-    setText(post?.text || "");
-    setImageUris(
-      post.images
-        ? post.images.map((image) => `http://192.168.0.199:5000${image}`)
-        : []
-    );
-    setShowAlertDialog(true);
-  };
-
-  const handleSetDeleteId = (post) => {
-    setPostId(post?.id);
-    setShowDeleteDialog(true);
-  };
-
   // Edit Post
   const handleEditPost = async () => {
     const formData = new FormData();
@@ -227,7 +188,7 @@ const Settings = () => {
       });
 
       const res = await axios.patch(
-        `http://192.168.0.199:5000/api/v1/post/${postId}`,
+        `http://192.168.0.197:5000/api/v1/post/${postId}`,
         formData,
         {
           headers: {
@@ -238,25 +199,12 @@ const Settings = () => {
 
       if (res.status === 200) {
         Alert.alert("Post updated successfully");
+        const userData = res?.data?.user;
+        await AsyncStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+        fetchUser();
         await getUserPosts(user.id);
         setShowAlertDialog(false);
-      }
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-    }
-  };
-
-  // Delete Post
-  const handleDeletePost = async () => {
-    try {
-      const res = await axios.delete(
-        `http://192.168.0.199:5000/api/v1/post/${postId}`
-      );
-
-      if (res?.status === 200) {
-        Alert.alert("Post deleted successfully");
-        await getUserPosts(user.id); // Wait for posts to update
-        setShowDeleteDialog(false); // Close delete dialog after posts are updated
       }
     } catch (error) {
       console.log(error.response?.data || error.message);
@@ -266,7 +214,7 @@ const Settings = () => {
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
-    getUserPosts(user.id);
+    fetchUser();
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
@@ -279,343 +227,124 @@ const Settings = () => {
           <ActivityIndicator size="large" color="#38BF64" />
         </View>
       ) : (
-        <View className="w-full">
-          {/* Profile info */}
-          <Card
-            size="md"
-            variant="filled"
-            className="flex gap-2 my-2"
-            style={styles.card}
-          >
-            {/* Settings item */}
-            <View>
-              {/* Post card */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <View className="w-full">
+            {/* Profile info */}
+            <Card
+              size="md"
+              variant="filled"
+              className="flex gap-2 my-2"
+              style={styles.card}
+            >
+              {/* Info */}
+              <View className="flex items-center gap-2">
+                <TouchableOpacity
+                  style={styles.logoutButton}
+                  onPress={handleSignOut}
+                >
+                  <Text style={styles.buttonText}>Logout</Text>
+                </TouchableOpacity>
 
-              {posts && (
-                <>
-                  <FlatList
-                    data={data}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item }) => (
-                      <Card
-                        key={item.index}
-                        size="md"
-                        variant="filled"
-                        style={styles.card}
-                      >
-                        <View className="flex flex-row items-center gap-2">
-                          <TouchableOpacity>
-                            <Avatar size="md">
-                              <AvatarImage
-                                source={{
-                                  uri: `http://192.168.0.199:5000${item?.author?.imageUrl}`,
-                                }}
-                              />
-                            </Avatar>
-                          </TouchableOpacity>
-                          <Heading size="md" className="mb-1">
-                            {item?.author?.firstName} {item?.author?.lastName}
-                          </Heading>
-                        </View>
-                        <View>
-                          {/* Content */}
-                          {item?.text && (
-                            <Text size="sm" className="text-justify">
-                              {item?.text}
-                            </Text>
-                          )}
-
-                          {/* Image */}
-                          {item?.images && (
-                            <>
-                              {item?.images?.map((image, index) => (
-                                <View className="flex gap-2 mt-2" key={index}>
-                                  <Image
-                                    source={{
-                                      uri: `http://192.168.0.199:5000${image}`,
-                                    }}
-                                    style={styles.postImage}
-                                  />
-                                </View>
-                              ))}
-                            </>
-                          )}
-                        </View>
-
-                        {/* Icon */}
-                        <View className="flex flex-row justify-between gap-2">
-                          {/* Like button */}
-                          <LikeButton
-                            postId={item?.id}
-                            userId={user?.id}
-                            initialLikes={item?.likes}
-                          />
-
-                          <View className="flex flex-row items-center gap-2">
-                            <TouchableOpacity
-                              onPress={() => handleSetPostId(item)}
-                            >
-                              <FontAwesome
-                                name="edit"
-                                size={24}
-                                color="green"
-                              />
-                            </TouchableOpacity>{" "}
-                            <TouchableOpacity
-                              onPress={() => handleSetDeleteId(item)}
-                            >
-                              <MaterialIcons
-                                name="delete-forever"
-                                size={24}
-                                color="red"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-
-                        {/* Edit Post Dialog */}
-                        <AlertDialog
-                          isOpen={showAlertDialog}
-                          onClose={handleClose}
-                          size="md"
-                        >
-                          <AlertDialogBackdrop />
-                          <AlertDialogContent>
-                            {/* Text Box */}
-                            <Textarea
-                              size="md"
-                              className="flex flex-row items-center w-full p-2"
-                            >
-                              <TextareaInput
-                                onChangeText={setText}
-                                value={text}
-                              />
-                            </Textarea>
-                            {/* Image upload button */}
-                            <TouchableOpacity className="w-12 mt-2">
-                              <Feather
-                                className="p-2 bg-[#38BF64] rounded-full"
-                                name="image"
-                                size={26}
-                                color="white"
-                                onPress={pickImages}
-                              />
-                            </TouchableOpacity>
-                            {/* Post Images */}
-                            {Image && (
-                              <View
-                                className={`flex flex-row flex-wrap items-center justify-center ${
-                                  Image
-                                    ? " rounded-md border-gray-300 mt-2"
-                                    : ""
-                                }`}
-                              >
-                                {imageUris.map((uri, index) => (
-                                  <Image
-                                    key={index}
-                                    source={{ uri }}
-                                    style={{
-                                      width: 100,
-                                      height: 100,
-                                      margin: 5,
-                                    }}
-                                    className="border border-gray-300 rounded-sm"
-                                  />
-                                ))}
-                              </View>
-                            )}
-                            <AlertDialogFooter className="">
-                              <Text
-                                onPress={() => handleEditPost(postId)}
-                                className="p-2 text-white bg-black rounded-md"
-                              >
-                                Update
-                              </Text>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-
-                        {/* Delete Post Dialog */}
-                        <AlertDialog
-                          isOpen={showDeleteDialog}
-                          onClose={handleCloseDelete}
-                          size="md"
-                        >
-                          <AlertDialogBackdrop />
-                          <AlertDialogContent>
-                            {/* Text Box */}
-
-                            <Text>Are you sure you want to delete this?</Text>
-                            <AlertDialogFooter className="mt-2">
-                              <Text
-                                onPress={handleCloseDelete}
-                                className="p-2 text-white bg-black rounded-md"
-                              >
-                                Cancel
-                              </Text>
-                              <Text
-                                onPress={handleDeletePost}
-                                className="p-2 text-white bg-red-500 rounded-md"
-                              >
-                                Delete
-                              </Text>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </Card>
-                    )}
-                    ListHeaderComponent={() => (
-                      <>
-                        {/* Info */}
-                        <View className="flex items-center gap-2">
-                          <TouchableOpacity
-                            style={styles.logoutButton}
-                            onPress={handleSignOut}
-                          >
-                            <Text style={styles.buttonText}>Logout</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity className="relative">
-                            {imageUri ? (
-                              <>
-                                <View style={{ marginTop: 10 }}>
-                                  <Image
-                                    source={{ uri: imageUri }}
-                                    style={{
-                                      width: 200,
-                                      height: 200,
-                                      borderRadius: 100,
-                                    }}
-                                  />
-                                </View>
-                              </>
-                            ) : (
-                              <Avatar size="2xl">
-                                <AvatarImage
-                                  source={{
-                                    uri: `http://192.168.0.199:5000${user?.imageUrl}`,
-                                  }}
-                                />
-                              </Avatar>
-                            )}
-
-                            {/* Camera icon */}
-                            <TouchableOpacity onPress={pickImage}>
-                              <Image
-                                source={require("../../assets/images/cam.png")}
-                                className=""
-                                style={styles.cameraIcon}
-                              />
-                            </TouchableOpacity>
-
-                            {/* First Name */}
-                            <FormControl
-                              className="mt-4"
-                              size="md"
-                              isDisabled={false}
-                              isReadOnly={false}
-                              isRequired={true}
-                            >
-                              <Input className="w-full my-1">
-                                <InputField
-                                  className="w-full"
-                                  type="text"
-                                  placeholder="first name"
-                                  value={firstName}
-                                  onChangeText={(text) => setFirstName(text)}
-                                />
-                              </Input>
-                            </FormControl>
-
-                            {/* Last Name */}
-                            <FormControl
-                              size="md"
-                              isDisabled={false}
-                              isReadOnly={false}
-                              isRequired={true}
-                            >
-                              <Input className="my-1">
-                                <InputField
-                                  type="text"
-                                  placeholder="last name"
-                                  value={lastName}
-                                  onChangeText={(text) => setLastName(text)}
-                                />
-                              </Input>
-                            </FormControl>
-
-                            {/* Email  */}
-                            <FormControl
-                              size="md"
-                              isDisabled={false}
-                              isReadOnly={false}
-                              isRequired={true}
-                            >
-                              <Input className="my-1">
-                                <InputField
-                                  type="email"
-                                  placeholder="email address"
-                                  value={email}
-                                  onChangeText={(text) => setEmail(text)}
-                                />
-                              </Input>
-                            </FormControl>
-
-                            {/* Password  */}
-                            <FormControl
-                              size="md"
-                              isDisabled={false}
-                              isReadOnly={false}
-                              isRequired={true}
-                            >
-                              <Input className="my-1">
-                                <InputField
-                                  type="password"
-                                  placeholder="password"
-                                  value={password}
-                                  onChangeText={(text) => setPassword(text)}
-                                />
-                              </Input>
-                            </FormControl>
-
-                            {/* Upload Button */}
-                            <TouchableOpacity
-                              style={styles.uploadButton}
-                              onPress={handleSubmit}
-                            >
-                              <Text style={styles.buttonText}>
-                                {loading ? "Updating..." : "Update Info"}
-                              </Text>
-                            </TouchableOpacity>
-                          </TouchableOpacity>
-                          <Heading size="xl" className="mb-1">
-                            {user?.firstName} {user?.lastName}
-                          </Heading>
-                        </View>
-                      </>
-                    )}
-                    refreshControl={
-                      <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
+                <View className="flex items-center">
+                  {imageUri ? (
+                    <View style={{ marginTop: 10 }}>
+                      <Image
+                        source={{ uri: imageUri }}
+                        style={{
+                          width: 200,
+                          height: 200,
+                          borderRadius: 100,
+                        }}
                       />
-                    }
-                    ListFooterComponent={() =>
-                      data.length === posts.length ? (
-                        <Text style={styles.noMoreText}>
-                          No More Posts Available
-                        </Text>
-                      ) : (
-                        <ActivityIndicator size="large" color="#38BF64" />
-                      )
-                    }
-                    onEndReached={() => setIndex(index + 1)}
-                    onEndReachedThreshold={0.1}
-                  />
-                </>
-              )}
-            </View>
-          </Card>
-        </View>
+                    </View>
+                  ) : (
+                    <Avatar size="2xl">
+                      <AvatarImage
+                        source={{
+                          uri: `http://192.168.0.197:5000${user?.imageUrl}`,
+                        }}
+                      />
+                    </Avatar>
+                  )}
+
+                  {/* Camera icon */}
+                  <TouchableOpacity onPress={pickImage}>
+                    <Image
+                      source={require("../../assets/images/cam.png")}
+                      style={styles.cameraIcon}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Form Fields */}
+                <View>
+                  <FormControl
+                    className="w-full mt-4"
+                    size="md"
+                    isRequired={true}
+                  >
+                    <Input className="w-full my-1">
+                      <InputField
+                        type="text"
+                        placeholder="first name"
+                        value={firstName}
+                        onChangeText={(text) => setFirstName(text)}
+                      />
+                    </Input>
+                  </FormControl>
+
+                  <FormControl size="md" isRequired={true}>
+                    <Input className="my-1">
+                      <InputField
+                        type="text"
+                        placeholder="last name"
+                        value={lastName}
+                        onChangeText={(text) => setLastName(text)}
+                      />
+                    </Input>
+                  </FormControl>
+
+                  <FormControl size="md" isRequired={true}>
+                    <Input className="my-1">
+                      <InputField
+                        type="email"
+                        placeholder="email address"
+                        value={email}
+                        onChangeText={(text) => setEmail(text)}
+                      />
+                    </Input>
+                  </FormControl>
+
+                  <FormControl size="md" isRequired={true}>
+                    <Input className="my-1">
+                      <InputField
+                        type="password"
+                        placeholder="password"
+                        value={password}
+                        onChangeText={(text) => setPassword(text)}
+                      />
+                    </Input>
+                  </FormControl>
+
+                  {/* Upload Button */}
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={handleSubmit}
+                  >
+                    <Text style={styles.buttonText}>
+                      {loading ? "Updating..." : "Update Info"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Card>
+          </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -698,8 +427,8 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     position: "absolute",
-    bottom: 60,
-    right: 0,
+    bottom: 10,
+    right: -60,
   },
 });
 

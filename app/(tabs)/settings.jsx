@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Image,
   Alert,
-  FlatList,
   ScrollView,
 } from "react-native";
 import { FormControl } from "@/components/ui/form-control";
@@ -17,15 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "expo-router";
 import { Card } from "@/components/ui/card";
-
 import axios from "axios";
-
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GlobalContext } from "../../context/GlobalContext";
 const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const [posts, setPosts] = useState([]);
   const { user, setUser, fetchUser } = useContext(GlobalContext);
   const [firstName, setFirstName] = React.useState(user?.firstName);
   const [lastName, setLastName] = React.useState(user?.lastName);
@@ -119,6 +115,7 @@ const Settings = () => {
 
       if (response?.status === 200) {
         Alert.alert("Success", "User Updated Successfully!");
+        setPassword("");
 
         // Update user state
         const updatedUser = response.data.user;
@@ -141,80 +138,11 @@ const Settings = () => {
     }
   };
 
-  // Get posts
-  const getUserPosts = async () => {
-    if (!user?.id) {
-      console.error("User ID is undefined!");
-      return;
-    }
-
-    try {
-      const res = await axios.get(
-        `http://192.168.0.197:5000/api/v1/post/user/${user?.id}`
-      );
-
-      if (res?.status === 200) {
-        setPosts(res?.data?.posts);
-      }
-    } catch (error) {
-      console.error(
-        "Error fetching user's posts:",
-        error.response?.data || error.message
-      );
-    }
-  };
-
-  // Usage Example (Pass the user ID)
-  useEffect(() => {
-    if (user) {
-      getUserPosts(user.id);
-    }
-  }, [user]);
-
-  // Edit Post
-  const handleEditPost = async () => {
-    const formData = new FormData();
-    try {
-      // Append text
-      formData.append("text", text);
-
-      // Append images
-      imageUris.forEach((uri, index) => {
-        formData.append("images", {
-          uri,
-          type: "image/jpeg",
-          name: `image-${index}.jpg`,
-        });
-      });
-
-      const res = await axios.patch(
-        `http://192.168.0.197:5000/api/v1/post/${postId}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (res.status === 200) {
-        Alert.alert("Post updated successfully");
-        const userData = res?.data?.user;
-        await AsyncStorage.setItem("user", JSON.stringify(userData));
-        setUser(userData);
-        fetchUser();
-        await getUserPosts(user.id);
-        setShowAlertDialog(false);
-      }
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-    }
-  };
-
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
     fetchUser();
+    setPassword("");
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);

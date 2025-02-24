@@ -55,38 +55,9 @@ const Profile = () => {
   const [imageUri, setImageUri] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      setFirstName(user.firstName || "");
-      setLastName(user.lastName || "");
-      setEmail(user.email || "");
-    }
-  }, [user]);
-
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
-
-  useEffect(() => {
     const value = 20 + 20 * index;
     setData(posts.slice(0, value));
   }, [index, posts]);
-
-  // Signout the user
-  const handleSignOut = async () => {
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("accessToken");
-    await AsyncStorage.removeItem("accessTokenExp");
-    setUser(null);
-    router.replace("/login");
-  };
 
   // Pick user profile picture
   const pickImages = async () => {
@@ -101,82 +72,6 @@ const Profile = () => {
 
       // Clear the previous images when selecting new ones
       setImageUris(selectedUris);
-    }
-  };
-
-  // Update User
-  const handleSubmit = async () => {
-    setLoading(true);
-
-    if (!firstName || !lastName || !email) {
-      Alert.alert("Error", "All fields are required!");
-      setLoading(false);
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Please enter a valid email address.");
-      setLoading(false);
-      return;
-    }
-
-    if (password && password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters long.");
-      setLoading(false);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("firstName", firstName);
-    formData.append("lastName", lastName);
-    formData.append("email", email);
-
-    if (password) {
-      formData.append("password", password);
-    }
-
-    if (imageUri) {
-      const fileName = imageUri.split("/").pop();
-      formData.append("imageUrl", {
-        uri: imageUri,
-        name: fileName,
-        type: "image/jpeg",
-      });
-    }
-
-    try {
-      const response = await axios.patch(
-        `http://192.168.0.197:5000/api/v1/user/update/single/${user?.id}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (response?.status === 200) {
-        Alert.alert("Success", "User Updated Successfully!");
-
-        // Update user state
-        const updatedUser = response.data.user;
-        setUser(updatedUser);
-
-        // Store the updated user in AsyncStorage
-        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-
-        // Fetch user again to ensure the latest data is loaded
-        fetchUser();
-      }
-    } catch (error) {
-      console.error(
-        "Error submitting form:",
-        error.response ? error.response.data : error
-      );
-      Alert.alert("Failed to update user");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -255,11 +150,12 @@ const Profile = () => {
 
       if (res.status === 200) {
         Alert.alert("Post updated successfully");
+        setShowAlertDialog(false);
         const userData = res?.data?.user;
         await AsyncStorage.setItem("user", JSON.stringify(userData));
         setUser(userData);
         fetchUser();
-        await getUserPosts(user.id);
+        await getUserPosts(user?.id);
         setShowAlertDialog(false);
       }
     } catch (error) {
@@ -276,8 +172,8 @@ const Profile = () => {
 
       if (res?.status === 200) {
         Alert.alert("Post deleted successfully");
-        await getUserPosts(user.id); // Wait for posts to update
-        setShowDeleteDialog(false); // Close delete dialog after posts are updated
+        await getUserPosts(user?.id);
+        setShowDeleteDialog(false);
       }
     } catch (error) {
       console.log(error.response?.data || error.message);
@@ -313,7 +209,7 @@ const Profile = () => {
             <View>
               {/* Post card */}
 
-              {posts && (
+              {posts && posts.length > 0 && (
                 <>
                   <FlatList
                     data={data}

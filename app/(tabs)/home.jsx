@@ -188,7 +188,9 @@ const Home = () => {
                       />
                     </Avatar>
                   </TouchableOpacity>
-                  <Heading size="md">{item?.author?.name}</Heading>
+                  <Heading size="md">
+                    {item?.author?.firstName} {item?.author?.lastName}
+                  </Heading>
                 </View>
                 <Text size="sm" style={styles.postText}>
                   {item?.text}

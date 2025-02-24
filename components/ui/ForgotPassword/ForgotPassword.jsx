@@ -22,10 +22,9 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GlobalContext } from "../../../context/GlobalContext";
 
-const LoginScreenUi = () => {
+const ForgotPassword = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const { user } = useContext(GlobalContext);
 
@@ -39,7 +38,7 @@ const LoginScreenUi = () => {
   //   Handle Submit Form
   const handleSubmit = async () => {
     setLoading(true);
-
+    console.log("handleSubmit", email);
     // Validate required fields
     if (!email || !password) {
       Alert.alert("Error", "All fields are required!");
@@ -55,35 +54,21 @@ const LoginScreenUi = () => {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters long.");
-      setLoading(false);
-      return;
-    }
-
-    const formData = {
-      email,
-      password,
-    };
-
     try {
-      const response = await api.post("/user/login", formData, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await api.post(
+        "http://192.168.0.197:5000/api/v1/user/update/password",
+        email,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log(response);
 
       if (response?.status === 200) {
-        const token = JSON.stringify(response?.data?.accessToken);
-        await AsyncStorage.setItem("accessToken", token);
-
-        const exp = JSON.stringify(response?.data?.accessTokenExp);
-        await AsyncStorage.setItem("accessTokenExp", exp);
-
-        const userData = JSON.stringify(response?.data?.user);
-        await AsyncStorage.setItem("user", userData);
-
-        router.replace("/(tabs)/home");
+        router.replace("/login");
       }
     } catch (error) {
       console.error(
@@ -99,6 +84,7 @@ const LoginScreenUi = () => {
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
+    setEmail("");
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
@@ -122,7 +108,7 @@ const LoginScreenUi = () => {
         >
           <View className="w-full">
             <Text className="mb-10 text-2xl font-bold text-center">
-              Sign In
+              Forgot Password
             </Text>
 
             {/* Email  */}
@@ -145,42 +131,16 @@ const LoginScreenUi = () => {
               </Input>
             </FormControl>
 
-            {/* Password  */}
-            <FormControl
-              size="md"
-              isDisabled={false}
-              isReadOnly={false}
-              isRequired={true}
-            >
-              <FormControlLabel>
-                <FormControlLabelText>Password</FormControlLabelText>
-              </FormControlLabel>
-              <Input className="my-1">
-                <InputField
-                  type="password"
-                  placeholder="password"
-                  value={password}
-                  onChangeText={(text) => setPassword(text)}
-                />
-              </Input>
-            </FormControl>
-
             <TouchableOpacity style={styles.button} onPress={handleSubmit}>
               <Text style={styles.buttonText}>
-                {loading ? "SUBMITTING..." : "SUBMIT"}
+                {loading ? "SENDING EMAIL..." : "SUBMIT"}
               </Text>
             </TouchableOpacity>
 
             <Text className="mt-5 text-sm text-center">
-              Don't have an account?{" "}
-              <Link href="/signup" className="text-blue-500">
-                Sign Up
-              </Link>
-            </Text>
-
-            <Text className="mt-5 text-sm text-center">
-              <Link href="/forgot-password" className="text-blue-500">
-                Forgot Password ?
+              Already have an account?{" "}
+              <Link href="/login" className="text-blue-500">
+                Log in
               </Link>
             </Text>
           </View>
@@ -275,4 +235,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreenUi;
+export default ForgotPassword;

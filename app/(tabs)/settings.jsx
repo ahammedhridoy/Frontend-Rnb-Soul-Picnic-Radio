@@ -104,7 +104,7 @@ const Settings = () => {
 
     try {
       const response = await axios.patch(
-        `http://192.168.0.197:5000/api/v1/user/update/single/${user?.id}`,
+        `https://api.rnbsouldashboard.com/api/v1/user/update/single/${user?.id}`,
         formData,
         {
           headers: {
@@ -194,7 +194,7 @@ const Settings = () => {
                     <Avatar size="2xl">
                       <AvatarImage
                         source={{
-                          uri: `http://192.168.0.197:5000${user?.imageUrl}`,
+                          uri: `https://api.rnbsouldashboard.com${user?.imageUrl}`,
                         }}
                       />
                     </Avatar>

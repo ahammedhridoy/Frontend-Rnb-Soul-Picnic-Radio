@@ -15,7 +15,7 @@ const LikeButton = ({ postId }) => {
 
     try {
       const res = await axios.get(
-        `http://192.168.0.197:5000/api/v1/post/${postId}`
+        `https://api.rnbsouldashboard.com/api/v1/post/${postId}`
       );
 
       if (res?.status === 200 && Array.isArray(res?.data?.post?.likes)) {
@@ -34,7 +34,7 @@ const LikeButton = ({ postId }) => {
   const handleLikeToggle = async () => {
     try {
       const res = await axios.post(
-        `http://192.168.0.197:5000/api/v1/post/${postId}/likes`,
+        `https://api.rnbsouldashboard.com/api/v1/post/${postId}/likes`,
         { userId: user?.id }
       );
 

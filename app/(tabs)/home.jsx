@@ -70,7 +70,7 @@ const Home = () => {
       });
 
       const res = await axios.post(
-        "http://192.168.0.197:5000/api/v1/post/create",
+        "https://api.rnbsouldashboard.com/api/v1/post/create",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -92,7 +92,9 @@ const Home = () => {
   // Get Posts
   const getPosts = async () => {
     try {
-      const res = await axios.get("http://192.168.0.197:5000/api/v1/post/all");
+      const res = await axios.get(
+        "https://api.rnbsouldashboard.com/api/v1/post/all"
+      );
       if (res?.status === 200) {
         setPosts(res?.data?.posts);
       }
@@ -132,7 +134,7 @@ const Home = () => {
                 <Avatar size="md">
                   <AvatarImage
                     source={{
-                      uri: `http://192.168.0.197:5000${user?.imageUrl}`,
+                      uri: `https://api.rnbsouldashboard.com${user?.imageUrl}`,
                     }}
                   />
                 </Avatar>
@@ -183,7 +185,7 @@ const Home = () => {
                     <Avatar size="md">
                       <AvatarImage
                         source={{
-                          uri: `http://192.168.0.197:5000${item?.author?.imageUrl}`,
+                          uri: `https://api.rnbsouldashboard.com${item?.author?.imageUrl}`,
                         }}
                       />
                     </Avatar>
@@ -198,7 +200,7 @@ const Home = () => {
                 {item?.images?.map((image, index) => (
                   <Image
                     key={index}
-                    source={{ uri: `http://192.168.0.197:5000${image}` }}
+                    source={{ uri: `https://api.rnbsouldashboard.com${image}` }}
                     style={styles.postImage}
                   />
                 ))}

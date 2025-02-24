@@ -31,7 +31,7 @@ const ForgotPassword = () => {
   const router = useRouter();
 
   const api = axios.create({
-    baseURL: "http://192.168.0.197:5000/api/v1",
+    baseURL: "https://api.rnbsouldashboard.com/api/v1",
     withCredentials: true,
   });
 
@@ -56,7 +56,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await api.post(
-        "http://192.168.0.197:5000/api/v1/user/update/password",
+        "https://api.rnbsouldashboard.com/api/v1/user/update/password",
         email,
         {
           headers: {

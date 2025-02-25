@@ -40,7 +40,7 @@ const ForgotPassword = () => {
     setLoading(true);
     console.log("handleSubmit", email);
     // Validate required fields
-    if (!email || !password) {
+    if (!email) {
       Alert.alert("Error", "All fields are required!");
       setLoading(false);
       return;
@@ -56,16 +56,14 @@ const ForgotPassword = () => {
 
     try {
       const response = await api.post(
-        "https://api.rnbsouldashboard.com/api/v1/user/update/password",
-        email,
+        "/user/update/password",
+        { email },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
-
-      console.log(response);
 
       if (response?.status === 200) {
         router.replace("/login");
@@ -75,7 +73,7 @@ const ForgotPassword = () => {
         "Error Login:",
         error.response ? error.response.data : error
       );
-      Alert.alert("Failed to login");
+      Alert.alert("Failed to send email", error.message);
     } finally {
       setLoading(false);
     }

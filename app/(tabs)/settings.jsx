@@ -20,6 +20,15 @@ import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GlobalContext } from "../../context/GlobalContext";
+import { Heading } from "@/components/ui/heading";
+import { Button, ButtonText } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogBackdrop,
+} from "@/components/ui/alert-dialog";
 const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { user, setUser, fetchUser } = useContext(GlobalContext);
@@ -28,6 +37,8 @@ const Settings = () => {
   const [email, setEmail] = React.useState(user?.email);
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [showAlertDialog, setShowAlertDialog] = React.useState(false);
+  const handleClose = () => setShowAlertDialog(false);
 
   const router = useRouter();
   const [imageUri, setImageUri] = useState(null);
@@ -138,6 +149,38 @@ const Settings = () => {
     }
   };
 
+  // Delete User
+  const handleDelete = async () => {
+    setLoading(true);
+
+    try {
+      const response = await axios.delete(
+        `https://api.rnbsouldashboard.com/api/v1/user/delete/account/${user?.id}`
+      );
+
+      if (response?.status === 200) {
+        Alert.alert("Success", "User Deleted Successfully!");
+
+        // Store the updated user in AsyncStorage
+        await AsyncStorage.removeItem("user");
+
+        // Fetch user again to ensure the latest data is loaded
+        fetchUser();
+
+        handleSignOut();
+        router.replace("/signup");
+      }
+    } catch (error) {
+      console.error(
+        "Error submitting form:",
+        error.response ? error.response.data : error
+      );
+      Alert.alert("Failed to Deleted user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
@@ -171,12 +214,61 @@ const Settings = () => {
             >
               {/* Info */}
               <View className="flex items-center gap-2">
-                <TouchableOpacity
-                  style={styles.logoutButton}
-                  onPress={handleSignOut}
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: "100%",
+                  }}
                 >
-                  <Text style={styles.buttonText}>Logout</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => setShowAlertDialog(true)}
+                  >
+                    <Text style={styles.deleteBtnText}>Delete Account</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.logoutButton}
+                    onPress={handleSignOut}
+                  >
+                    <Text style={styles.buttonText}>Logout</Text>
+                  </TouchableOpacity>
+                </View>
+                {/* Alert Dialog */}
+                <AlertDialog
+                  isOpen={showAlertDialog}
+                  onClose={handleClose}
+                  size="md"
+                >
+                  <AlertDialogBackdrop />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <Heading
+                        className="font-semibold text-typography-950"
+                        size="md"
+                      >
+                        Are you sure you want to delete this Account?
+                      </Heading>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter className="">
+                      <Button
+                        variant="outline"
+                        action="secondary"
+                        onPress={handleClose}
+                        size="sm"
+                      >
+                        <ButtonText>Cancel</ButtonText>
+                      </Button>
+                      <Button size="sm" onPress={handleClose && handleDelete}>
+                        <ButtonText>Delete</ButtonText>
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <View className="flex items-center">
                   {imageUri ? (
@@ -357,6 +449,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 10,
     right: -60,
+  },
+  deleteBtnText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Poppins",
+    color: "#FFFFFF",
+    textAlign: "center",
+    paddingRight: 10,
+    paddingLeft: 10,
+  },
+  deleteBtn: {
+    backgroundColor: "red",
+    borderRadius: 50,
+    paddingTop: 5,
+    paddingBottom: 5,
   },
 });
 

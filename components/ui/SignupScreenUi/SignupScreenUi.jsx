@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Linking,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +20,13 @@ import { Input, InputField } from "@/components/ui/input";
 import axios from "axios";
 import { Link, Redirect, router } from "expo-router";
 import { useRouter } from "expo-router";
+import {
+  Checkbox,
+  CheckboxIndicator,
+  CheckboxLabel,
+  CheckboxIcon,
+} from "@/components/ui/checkbox";
+import { CheckIcon } from "@/components/ui/icon";
 
 const SignupScreenUi = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -27,17 +35,23 @@ const SignupScreenUi = () => {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   const router = useRouter();
 
   const api = axios.create({
-    baseURL: "https://api.rnbsouldashboard.com/api/v1",
+    baseURL: "http://192.168.0.103:5000/api/v1",
     withCredentials: true,
   });
 
   //   Handle Submit Form
   const handleSubmit = async () => {
     setLoading(true);
+
+    if (!agreed) {
+      alert("You must agree to the Terms of Service to continue.");
+      return;
+    }
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password) {
@@ -65,6 +79,7 @@ const SignupScreenUi = () => {
       lastName,
       email,
       password,
+      agreed,
     };
 
     try {
@@ -102,6 +117,12 @@ const SignupScreenUi = () => {
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
+  };
+
+  const handleOpenURL = (url) => {
+    Linking.openURL(url).catch((err) =>
+      console.error("Failed to open URL:", err)
+    );
   };
 
   return (
@@ -202,6 +223,55 @@ const SignupScreenUi = () => {
                 />
               </Input>
             </FormControl>
+
+            {/* EULA */}
+            <Checkbox
+              size="md"
+              isInvalid={false}
+              isDisabled={false}
+              className="py-4"
+              isChecked={agreed}
+              onChange={() => setAgreed(!agreed)}
+            >
+              <CheckboxIndicator>
+                <CheckboxIcon as={CheckIcon} />
+              </CheckboxIndicator>
+              <CheckboxLabel>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Text>I agree to the </Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleOpenURL("https://yourwebsite.com/eula")
+                    }
+                  >
+                    <Text
+                      style={{ color: "blue", textDecorationLine: "underline" }}
+                    >
+                      Terms of Service
+                    </Text>
+                  </TouchableOpacity>
+                  <Text> and </Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleOpenURL("https://yourwebsite.com/privacy")
+                    }
+                  >
+                    <Text
+                      style={{ color: "blue", textDecorationLine: "underline" }}
+                    >
+                      Privacy Policy
+                    </Text>
+                  </TouchableOpacity>
+                  <Text>.</Text>
+                </View>
+              </CheckboxLabel>
+            </Checkbox>
 
             <TouchableOpacity style={styles.button} onPress={handleSubmit}>
               <Text style={styles.buttonText}>

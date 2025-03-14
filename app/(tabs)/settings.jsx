@@ -115,7 +115,7 @@ const Settings = () => {
 
     try {
       const response = await axios.patch(
-        `https://api.rnbsouldashboard.com/api/v1/user/update/single/${user?.id}`,
+        `http://192.168.0.103:5000/api/v1/user/update/single/${user?.id}`,
         formData,
         {
           headers: {
@@ -155,7 +155,7 @@ const Settings = () => {
 
     try {
       const response = await axios.delete(
-        `https://api.rnbsouldashboard.com/api/v1/user/delete/account/${user?.id}`
+        `http://192.168.0.103:5000/api/v1/user/delete/account/${user?.id}`
       );
 
       if (response?.status === 200) {
@@ -286,7 +286,7 @@ const Settings = () => {
                     <Avatar size="2xl">
                       <AvatarImage
                         source={{
-                          uri: `https://api.rnbsouldashboard.com${user?.imageUrl}`,
+                          uri: `http://192.168.0.103:5000${user?.imageUrl}`,
                         }}
                       />
                     </Avatar>

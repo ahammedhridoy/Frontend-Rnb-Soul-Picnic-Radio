@@ -21,6 +21,14 @@ import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import LikeButton from "../../components/ui/LikeButton/LikeButton";
 import { GlobalContext } from "../../context/GlobalContext";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogBody,
+  AlertDialogBackdrop,
+} from "@/components/ui/alert-dialog";
 
 const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -30,6 +38,10 @@ const Home = () => {
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
   const { user } = useContext(GlobalContext);
+  const [showReportDialog, setShowReportDialog] = React.useState(false);
+  const handleClose = () => setShowReportDialog(false);
+  const [reason, setReason] = useState("");
+  const [report, setReport] = useState(null);
 
   useEffect(() => {
     const value = 20 + 20 * index;
@@ -70,7 +82,7 @@ const Home = () => {
       });
 
       const res = await axios.post(
-        "https://api.rnbsouldashboard.com/api/v1/post/create",
+        "http://192.168.0.103:5000/api/v1/post/create",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -92,9 +104,7 @@ const Home = () => {
   // Get Posts
   const getPosts = async () => {
     try {
-      const res = await axios.get(
-        "https://api.rnbsouldashboard.com/api/v1/post/all"
-      );
+      const res = await axios.get("http://192.168.0.103:5000/api/v1/post/all");
       if (res?.status === 200) {
         setPosts(res?.data?.posts);
       }
@@ -103,6 +113,37 @@ const Home = () => {
         "Error fetching posts:",
         error.response?.data || error.message
       );
+    }
+  };
+
+  // Handle report
+  const handleReportPress = (item) => {
+    setShowReportDialog(true);
+    setReport(item);
+  };
+
+  // Report Post
+  const reportPost = async () => {
+    try {
+      const response = await axios.post(
+        "http://192.168.0.103:5000/api/v1/report/register",
+        {
+          postId: report.id,
+          reporterId: user.id,
+          reason,
+        }
+      );
+
+      if (response.status === 400) {
+        Alert.alert("Post already reported");
+      } else if (response.status === 201) {
+        Alert.alert("Post reported successfully");
+      }
+
+      setShowReportDialog(false);
+    } catch (error) {
+      console.error("Error reporting post:", error);
+      Alert.alert("Error reporting post. Please try again.");
     }
   };
 
@@ -134,7 +175,7 @@ const Home = () => {
                 <Avatar size="md">
                   <AvatarImage
                     source={{
-                      uri: `https://api.rnbsouldashboard.com${user?.imageUrl}`,
+                      uri: `http://192.168.0.103:5000${user?.imageUrl}`,
                     }}
                   />
                 </Avatar>
@@ -185,7 +226,7 @@ const Home = () => {
                     <Avatar size="md">
                       <AvatarImage
                         source={{
-                          uri: `https://api.rnbsouldashboard.com${item?.author?.imageUrl}`,
+                          uri: `http://192.168.0.103:5000${item?.author?.imageUrl}`,
                         }}
                       />
                     </Avatar>
@@ -200,7 +241,7 @@ const Home = () => {
                 {item?.images?.map((image, index) => (
                   <Image
                     key={index}
-                    source={{ uri: `https://api.rnbsouldashboard.com${image}` }}
+                    source={{ uri: `http://192.168.0.103:5000${image}` }}
                     style={styles.postImage}
                   />
                 ))}
@@ -209,6 +250,56 @@ const Home = () => {
                   userId={user?.id}
                   initialLikes={item?.likes}
                 />
+
+                {user?.id !== item?.authorId && (
+                  <View className="flex-row justify-between">
+                    <TouchableOpacity onPress={() => handleReportPress(item)}>
+                      <Text className="text-red-600">Report Post</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity>
+                      <Text className="text-slate-600">Block User</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Dialog to report post */}
+                <AlertDialog
+                  isOpen={showReportDialog}
+                  onClose={handleClose}
+                  size="md"
+                >
+                  <AlertDialogBackdrop />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <Heading
+                        className="font-semibold text-typography-950"
+                        size="md"
+                      >
+                        Explain your reason for reporting this post
+                      </Heading>
+                    </AlertDialogHeader>
+                    <AlertDialogBody className="mt-3 mb-4">
+                      <Textarea size="md" style={styles.textarea}>
+                        <TextareaInput
+                          onChangeText={setReason}
+                          value={reason}
+                          placeholder="Your text goes here..."
+                        />
+                      </Textarea>
+                    </AlertDialogBody>
+                    <AlertDialogFooter className="">
+                      <TouchableOpacity onPress={handleClose}>
+                        <Text>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        className="p-2 bg-red-600 rounded"
+                        onPress={reportPost}
+                      >
+                        <Text className="text-white">Submit</Text>
+                      </TouchableOpacity>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </Card>
             )}
             refreshControl={

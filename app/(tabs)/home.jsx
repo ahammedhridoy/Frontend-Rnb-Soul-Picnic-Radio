@@ -82,7 +82,7 @@ const Home = () => {
       });
 
       const res = await axios.post(
-        "http://192.168.0.103:5000/api/v1/post/create",
+        "http://192.168.0.104:5000/api/v1/post/create",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -104,7 +104,7 @@ const Home = () => {
   // Get Posts
   const getPosts = async () => {
     try {
-      const res = await axios.get("http://192.168.0.103:5000/api/v1/post/all");
+      const res = await axios.get("http://192.168.0.104:5000/api/v1/post/all");
       if (res?.status === 200) {
         setPosts(res?.data?.posts);
       }
@@ -126,7 +126,7 @@ const Home = () => {
   const reportPost = async () => {
     try {
       const response = await axios.post(
-        "http://192.168.0.103:5000/api/v1/report/register",
+        "http://192.168.0.104:5000/api/v1/report/register",
         {
           postId: report.id,
           reporterId: user.id,
@@ -175,7 +175,7 @@ const Home = () => {
                 <Avatar size="md">
                   <AvatarImage
                     source={{
-                      uri: `http://192.168.0.103:5000${user?.imageUrl}`,
+                      uri: `http://192.168.0.104:5000${user?.imageUrl}`,
                     }}
                   />
                 </Avatar>
@@ -226,7 +226,7 @@ const Home = () => {
                     <Avatar size="md">
                       <AvatarImage
                         source={{
-                          uri: `http://192.168.0.103:5000${item?.author?.imageUrl}`,
+                          uri: `http://192.168.0.104:5000${item?.author?.imageUrl}`,
                         }}
                       />
                     </Avatar>
@@ -241,7 +241,7 @@ const Home = () => {
                 {item?.images?.map((image, index) => (
                   <Image
                     key={index}
-                    source={{ uri: `http://192.168.0.103:5000${image}` }}
+                    source={{ uri: `http://192.168.0.104:5000${image}` }}
                     style={styles.postImage}
                   />
                 ))}

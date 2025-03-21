@@ -20,7 +20,7 @@ const Events = () => {
   const [events, setEvents] = useState([]);
 
   const api = axios.create({
-    baseURL: "http://192.168.0.103:5000/api/v1",
+    baseURL: "http://192.168.0.104:5000/api/v1",
     withCredentials: true,
   });
 
@@ -76,7 +76,7 @@ const Events = () => {
                   <Image
                     style={styles.image}
                     source={{
-                      uri: `${"http://192.168.0.103:5000"}${event?.image}`,
+                      uri: `${"http://192.168.0.104:5000"}${event?.image}`,
                     }}
                   />
                   <Text style={styles.title}>{event?.title}</Text>

@@ -84,7 +84,7 @@ const Profile = () => {
 
     try {
       const res = await axios.get(
-        `http://192.168.0.103:5000/api/v1/post/user/${user?.id}`
+        `http://192.168.0.104:5000/api/v1/post/user/${user?.id}`
       );
 
       if (res?.status === 200) {
@@ -111,7 +111,7 @@ const Profile = () => {
     setText(post?.text || "");
     setImageUris(
       post.images
-        ? post.images.map((image) => `http://192.168.0.103:5000${image}`)
+        ? post.images.map((image) => `http://192.168.0.104:5000${image}`)
         : []
     );
     setShowAlertDialog(true);
@@ -139,7 +139,7 @@ const Profile = () => {
       });
 
       const res = await axios.patch(
-        `http://192.168.0.103:5000/api/v1/post/${postId}`,
+        `http://192.168.0.104:5000/api/v1/post/${postId}`,
         formData,
         {
           headers: {
@@ -167,7 +167,7 @@ const Profile = () => {
   const handleDeletePost = async () => {
     try {
       const res = await axios.delete(
-        `http://192.168.0.103:5000/api/v1/post/${postId}`
+        `http://192.168.0.104:5000/api/v1/post/${postId}`
       );
 
       if (res?.status === 200) {
@@ -226,7 +226,7 @@ const Profile = () => {
                             <Avatar size="md">
                               <AvatarImage
                                 source={{
-                                  uri: `http://192.168.0.103:5000${item?.author?.imageUrl}`,
+                                  uri: `http://192.168.0.104:5000${item?.author?.imageUrl}`,
                                 }}
                               />
                             </Avatar>
@@ -250,7 +250,7 @@ const Profile = () => {
                                 <View className="flex gap-2 mt-2" key={index}>
                                   <Image
                                     source={{
-                                      uri: `http://192.168.0.103:5000${image}`,
+                                      uri: `http://192.168.0.104:5000${image}`,
                                     }}
                                     style={styles.postImage}
                                   />

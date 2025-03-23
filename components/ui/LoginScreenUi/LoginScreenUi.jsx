@@ -83,6 +83,19 @@ const LoginScreenUi = () => {
         const userData = JSON.stringify(response?.data?.user);
         await AsyncStorage.setItem("user", userData);
 
+        const accessToken = await AsyncStorage.getItem("accessToken");
+
+        if (!accessToken) {
+          const token = JSON.stringify(response?.data?.accessToken);
+          await AsyncStorage.setItem("accessToken", token);
+
+          const exp = JSON.stringify(response?.data?.accessTokenExp);
+          await AsyncStorage.setItem("accessTokenExp", exp);
+
+          const userData = JSON.stringify(response?.data?.user);
+          await AsyncStorage.setItem("user", userData);
+        }
+
         router.replace("/(tabs)/home");
       }
     } catch (error) {
@@ -183,6 +196,15 @@ const LoginScreenUi = () => {
                 Forgot Password ?
               </Link>
             </Text>
+
+            <TouchableOpacity
+              onPress={() => router.replace("/radio")}
+              className="mt-5 p-4 bg-blue-500 rounded"
+            >
+              <Text className="text-xl text-center text-white">
+                Start Without Account
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       )}

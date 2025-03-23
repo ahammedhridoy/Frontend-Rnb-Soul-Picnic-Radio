@@ -29,6 +29,9 @@ import {
   AlertDialogBody,
   AlertDialogBackdrop,
 } from "@/components/ui/alert-dialog";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+const defaultImageUri = "/assets/images/defaultImage.png";
 
 const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -42,11 +45,105 @@ const Home = () => {
   const handleClose = () => setShowReportDialog(false);
   const [reason, setReason] = useState("");
   const [report, setReport] = useState(null);
+  const [showBlockDialog, setShowBlockDialog] = React.useState(false);
+  const handleBlockClose = () => setShowBlockDialog(false);
+  const [blockUserId, setBlockUserId] = useState(null);
+  const [blockUserName, setBlockUserName] = useState(null);
+  const [currentUser, setCurrentUser] = React.useState(false);
+  const [blUsers, setBlUsers] = useState([]);
+
+  const fetchBlockedUsers = async () => {
+    try {
+      if (!currentUser?.id) {
+        console.error("User ID is undefined!");
+        return;
+      }
+
+      const userId = currentUser?.id;
+      const response = await axios.get(
+        `http://192.168.0.104:5000/api/v1/user/blocked/${userId}`
+      );
+
+      if (
+        response?.status === 200 &&
+        Array.isArray(response?.data?.blockedUsers)
+      ) {
+        setBlUsers(response.data.blockedUsers);
+        return response.data.blockedUsers;
+      } else {
+        console.error(
+          "Blocked users is not an array:",
+          response?.data?.blockedUsers
+        );
+        return [];
+      }
+    } catch (error) {
+      console.error(
+        "Error fetching blocked users:",
+        error.response?.data?.message || error.message
+      );
+      return [];
+    }
+  };
+  // Get single user
+  const getUser = async () => {
+    try {
+      const user = JSON.parse(await AsyncStorage.getItem("user"));
+      const response = await axios.get(
+        `http://192.168.0.104:5000/api/v1/user/single/${user?.id}`
+      );
+      if (response?.status === 200) {
+        setCurrentUser(response?.data.user);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getUser();
+    fetchBlockedUsers();
+  }, []);
+
+  const router = useRouter();
+  // if (!user) router.replace("/login");
 
   useEffect(() => {
     const value = 20 + 20 * index;
     setData(posts.slice(0, value));
   }, [index, posts]);
+
+  // Handle block
+  const handleBlockPress = (item) => {
+    setShowBlockDialog(true);
+    setBlockUserName(item.author.firstName);
+    setBlockUserId(item.authorId);
+  };
+  const blockUser = async () => {
+    try {
+      const response = await axios.post(
+        "http://192.168.0.104:5000/api/v1/user/block",
+        {
+          userId: currentUser?.id,
+          blockUserId,
+          blockUserName,
+        }
+      );
+
+      if (response?.status === 400) {
+        Alert.alert("User already blocked");
+        setShowBlockDialog(false);
+        return;
+      }
+
+      if (response?.status === 200) {
+        Alert.alert("User blocked successfully");
+        setShowBlockDialog(false);
+      }
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
 
   const pickImages = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -63,14 +160,14 @@ const Home = () => {
 
   // Create Post
   const createPost = async () => {
-    if (!user) return console.error("User not logged in.");
+    if (!currentUser) return console.error("User not logged in.");
 
     if (!text && !imageUris.length)
       return Alert.alert("No text or images provided.");
 
     try {
       const formData = new FormData();
-      formData.append("userId", user.id);
+      formData.append("userId", currentUser?.id);
       formData.append("text", text || "");
 
       imageUris.forEach((uri, index) => {
@@ -106,7 +203,13 @@ const Home = () => {
     try {
       const res = await axios.get("http://192.168.0.104:5000/api/v1/post/all");
       if (res?.status === 200) {
-        setPosts(res?.data?.posts);
+        const filteredPosts = Array.isArray(res?.data?.posts)
+          ? res?.data?.posts.filter(
+              (post) =>
+                !blUsers.some((blockedUser) => blockedUser.id === post.authorId)
+            )
+          : [];
+        setPosts(filteredPosts);
       }
     } catch (error) {
       console.error(
@@ -115,6 +218,17 @@ const Home = () => {
       );
     }
   };
+
+  console.log(blUsers);
+  // Filter posts excluding blocked users' posts
+  const filteredPosts = Array.isArray(posts)
+    ? posts.filter(
+        (post) =>
+          !blUsers.some((blockedUser) => blockedUser.id === post.authorId)
+      )
+    : [];
+
+  console.log("Filtered Posts:", JSON.stringify(filteredPosts, null, 2));
 
   // Handle report
   const handleReportPress = (item) => {
@@ -125,11 +239,13 @@ const Home = () => {
   // Report Post
   const reportPost = async () => {
     try {
+      if (!currentUser) return console.error("User not logged in.");
+      if (!reason) return Alert.alert("Please provide a reason.");
       const response = await axios.post(
         "http://192.168.0.104:5000/api/v1/report/register",
         {
           postId: report.id,
-          reporterId: user.id,
+          reporterId: currentUser.id,
           reason,
         }
       );
@@ -169,50 +285,44 @@ const Home = () => {
         </View>
       ) : (
         <>
-          <View style={styles.header}>
-            <Textarea size="md" style={styles.textarea}>
-              <TouchableOpacity>
-                <Avatar size="md">
-                  <AvatarImage
-                    source={{
-                      uri: `http://192.168.0.104:5000${user?.imageUrl}`,
-                    }}
-                  />
-                </Avatar>
-              </TouchableOpacity>
-              <TextareaInput
-                onChangeText={setText}
-                value={text}
-                placeholder="Your text goes here..."
-              />
-            </Textarea>
-            {imageUris.length > 0 && (
-              <View style={styles.imageContainer}>
-                {imageUris.map((uri, index) => (
-                  <Image
-                    key={index}
-                    source={{ uri }}
-                    style={styles.imagePreview}
-                  />
-                ))}
-              </View>
-            )}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={pickImages}>
-                <Feather
-                  name="image"
-                  size={26}
-                  color="white"
-                  style={styles.iconButton}
+          {currentUser && (
+            <View style={styles.header}>
+              <Textarea size="md" style={styles.textarea}>
+                <TextareaInput
+                  onChangeText={setText}
+                  value={text}
+                  placeholder="Your text goes here..."
                 />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={createPost}>
-                <Text style={styles.buttonText}>POST</Text>
-              </TouchableOpacity>
+              </Textarea>
+
+              {imageUris.length > 0 && (
+                <View style={styles.imageContainer}>
+                  {imageUris.map((uri, index) => (
+                    <Image
+                      key={index}
+                      source={{ uri }}
+                      style={styles.imagePreview}
+                    />
+                  ))}
+                </View>
+              )}
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity onPress={pickImages}>
+                  <Feather
+                    name="image"
+                    size={26}
+                    color="white"
+                    style={styles.iconButton}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={createPost}>
+                  <Text style={styles.buttonText}>POST</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
           <FlatList
-            data={data}
+            data={posts}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({ item }) => (
               <Card
@@ -226,7 +336,9 @@ const Home = () => {
                     <Avatar size="md">
                       <AvatarImage
                         source={{
-                          uri: `http://192.168.0.104:5000${item?.author?.imageUrl}`,
+                          uri: item?.author?.imageUrl
+                            ? `http://192.168.0.104:5000${item?.author?.imageUrl}`
+                            : defaultImageUri,
                         }}
                       />
                     </Avatar>
@@ -245,20 +357,56 @@ const Home = () => {
                     style={styles.postImage}
                   />
                 ))}
-                <LikeButton
-                  postId={item?.id}
-                  userId={user?.id}
-                  initialLikes={item?.likes}
-                />
+                {currentUser && (
+                  <LikeButton
+                    postId={item?.id}
+                    userId={currentUser?.id}
+                    initialLikes={item?.likes}
+                  />
+                )}
 
-                {user?.id !== item?.authorId && (
+                {currentUser?.id !== item?.authorId && (
                   <View className="flex-row justify-between">
                     <TouchableOpacity onPress={() => handleReportPress(item)}>
-                      <Text className="text-red-600">Report Post</Text>
+                      {currentUser && (
+                        <Text className="text-red-600">Report Post</Text>
+                      )}
                     </TouchableOpacity>
-                    <TouchableOpacity>
-                      <Text className="text-slate-600">Block User</Text>
+                    <TouchableOpacity onPress={() => handleBlockPress(item)}>
+                      {currentUser && (
+                        <Text className="text-slate-600">Block User</Text>
+                      )}
                     </TouchableOpacity>
+                    {/* Dialog */}
+                    <AlertDialog
+                      isOpen={showBlockDialog}
+                      onClose={handleBlockClose}
+                      size="md"
+                    >
+                      <AlertDialogBackdrop />
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <Heading
+                            className="font-semibold text-typography-950"
+                            size="md"
+                          >
+                            Are you sure you want to block this user?
+                          </Heading>
+                        </AlertDialogHeader>
+
+                        <AlertDialogFooter className="">
+                          <TouchableOpacity onPress={handleBlockClose}>
+                            <Text>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            className="p-2 bg-red-600 rounded"
+                            onPress={() => blockUser(item?.authorId)}
+                          >
+                            <Text className="text-white">Block</Text>
+                          </TouchableOpacity>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </View>
                 )}
 

@@ -31,25 +31,30 @@ import {
 } from "@/components/ui/alert-dialog";
 const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const { user, setUser, fetchUser } = useContext(GlobalContext);
-  const [firstName, setFirstName] = React.useState(user?.firstName);
-  const [lastName, setLastName] = React.useState(user?.lastName);
-  const [email, setEmail] = React.useState(user?.email);
+  const { setUser, fetchUser } = useContext(GlobalContext);
+  const [firstName, setFirstName] = React.useState(currentUser?.firstName);
+  const [lastName, setLastName] = React.useState(currentUser?.lastName);
+  const [email, setEmail] = React.useState(currentUser?.email);
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [showAlertDialog, setShowAlertDialog] = React.useState(false);
   const handleClose = () => setShowAlertDialog(false);
+  const [currentUser, setCurrentUser] = React.useState(false);
 
   const router = useRouter();
   const [imageUri, setImageUri] = useState(null);
 
-  useEffect(() => {
-    if (user) {
-      setFirstName(user.firstName || "");
-      setLastName(user.lastName || "");
-      setEmail(user.email || "");
-    }
-  }, [user]);
+  const defaultImageUri = "/assets/images/defaultImage.png";
+
+  // if (!currentUser) router.replace("/login");
+
+  // useEffect(() => {
+  //   if (user) {
+  //     setFirstName(user.firstName || "");
+  //     setLastName(user.lastName || "");
+  //     setEmail(user.email || "");
+  //   }
+  // }, [user]);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -68,9 +73,32 @@ const Settings = () => {
     await AsyncStorage.removeItem("user");
     await AsyncStorage.removeItem("accessToken");
     await AsyncStorage.removeItem("accessTokenExp");
+    setCurrentUser(null);
     setUser(null);
     router.replace("/login");
   };
+
+  // Get single user
+  const getUser = async () => {
+    try {
+      const user = JSON.parse(await AsyncStorage.getItem("user"));
+      const response = await axios.get(
+        `http://192.168.0.104:5000/api/v1/user/single/${user?.id}`
+      );
+      if (response?.status === 200) {
+        setCurrentUser(response?.data.user);
+        setFirstName(response?.data.user?.firstName);
+        setLastName(response?.data.user?.lastName);
+        setEmail(response?.data.user?.email);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getUser();
+  }, []);
 
   // Update User
   const handleSubmit = async () => {
@@ -115,7 +143,7 @@ const Settings = () => {
 
     try {
       const response = await axios.patch(
-        `http://192.168.0.104:5000/api/v1/user/update/single/${user?.id}`,
+        `http://192.168.0.104:5000/api/v1/user/update/single/${currentUser?.id}`,
         formData,
         {
           headers: {
@@ -130,13 +158,13 @@ const Settings = () => {
 
         // Update user state
         const updatedUser = response.data.user;
-        setUser(updatedUser);
+        setCurrentUser(updatedUser);
 
         // Store the updated user in AsyncStorage
         await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
 
         // Fetch user again to ensure the latest data is loaded
-        fetchUser();
+        getUser();
       }
     } catch (error) {
       console.error(
@@ -155,7 +183,7 @@ const Settings = () => {
 
     try {
       const response = await axios.delete(
-        `http://192.168.0.104:5000/api/v1/user/delete/account/${user?.id}`
+        `http://192.168.0.104:5000/api/v1/user/delete/account/${currentUser?.id}`
       );
 
       if (response?.status === 200) {
@@ -163,9 +191,13 @@ const Settings = () => {
 
         // Store the updated user in AsyncStorage
         await AsyncStorage.removeItem("user");
+        await AsyncStorage.removeItem("accessToken");
+        await AsyncStorage.removeItem("accessTokenExp");
+        setCurrentUser(null);
+        setUser(null);
 
         // Fetch user again to ensure the latest data is loaded
-        fetchUser();
+        getUser();
 
         handleSignOut();
         router.replace("/signup");
@@ -184,8 +216,9 @@ const Settings = () => {
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
-    fetchUser();
+    getUser();
     setPassword("");
+    getUser();
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
@@ -223,19 +256,23 @@ const Settings = () => {
                     width: "100%",
                   }}
                 >
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => setShowAlertDialog(true)}
-                  >
-                    <Text style={styles.deleteBtnText}>Delete Account</Text>
-                  </TouchableOpacity>
+                  {currentUser && (
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={() => setShowAlertDialog(true)}
+                    >
+                      <Text style={styles.deleteBtnText}>Delete Account</Text>
+                    </TouchableOpacity>
+                  )}
 
-                  <TouchableOpacity
-                    style={styles.logoutButton}
-                    onPress={handleSignOut}
-                  >
-                    <Text style={styles.buttonText}>Logout</Text>
-                  </TouchableOpacity>
+                  {currentUser && (
+                    <TouchableOpacity
+                      style={styles.logoutButton}
+                      onPress={handleSignOut}
+                    >
+                      <Text style={styles.buttonText}>Logout</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 {/* Alert Dialog */}
                 <AlertDialog
@@ -270,97 +307,105 @@ const Settings = () => {
                   </AlertDialogContent>
                 </AlertDialog>
 
-                <View className="flex items-center">
-                  {imageUri ? (
-                    <View style={{ marginTop: 10 }}>
-                      <Image
-                        source={{ uri: imageUri }}
-                        style={{
-                          width: 200,
-                          height: 200,
-                          borderRadius: 100,
-                        }}
-                      />
-                    </View>
-                  ) : (
-                    <Avatar size="2xl">
-                      <AvatarImage
-                        source={{
-                          uri: `http://192.168.0.104:5000${user?.imageUrl}`,
-                        }}
-                      />
-                    </Avatar>
-                  )}
+                {currentUser && (
+                  <View className="flex items-center">
+                    {imageUri ? (
+                      <View style={{ marginTop: 10 }}>
+                        <Image
+                          source={{
+                            uri: imageUri,
+                          }}
+                          style={{
+                            width: 200,
+                            height: 200,
+                            borderRadius: 100,
+                          }}
+                        />
+                      </View>
+                    ) : (
+                      <Avatar size="2xl">
+                        <AvatarImage
+                          source={{
+                            uri: currentUser?.imageUrl
+                              ? `http://192.168.0.104:5000${currentUser?.imageUrl}`
+                              : defaultImageUri,
+                          }}
+                        />
+                      </Avatar>
+                    )}
 
-                  {/* Camera icon */}
-                  <TouchableOpacity onPress={pickImage}>
-                    <Image
-                      source={require("../../assets/images/cam.png")}
-                      style={styles.cameraIcon}
-                    />
-                  </TouchableOpacity>
-                </View>
+                    {/* Camera icon */}
+                    <TouchableOpacity onPress={pickImage}>
+                      <Image
+                        source={require("../../assets/images/cam.png")}
+                        style={styles.cameraIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 {/* Form Fields */}
-                <View>
-                  <FormControl
-                    className="w-full mt-4"
-                    size="md"
-                    isRequired={true}
-                  >
-                    <Input className="w-full my-1">
-                      <InputField
-                        type="text"
-                        placeholder="first name"
-                        value={firstName}
-                        onChangeText={(text) => setFirstName(text)}
-                      />
-                    </Input>
-                  </FormControl>
+                {currentUser && (
+                  <View>
+                    <FormControl
+                      className="w-full mt-4"
+                      size="md"
+                      isRequired={true}
+                    >
+                      <Input className="w-full my-1">
+                        <InputField
+                          type="text"
+                          placeholder="first name"
+                          value={firstName}
+                          onChangeText={(text) => setFirstName(text)}
+                        />
+                      </Input>
+                    </FormControl>
 
-                  <FormControl size="md" isRequired={true}>
-                    <Input className="my-1">
-                      <InputField
-                        type="text"
-                        placeholder="last name"
-                        value={lastName}
-                        onChangeText={(text) => setLastName(text)}
-                      />
-                    </Input>
-                  </FormControl>
+                    <FormControl size="md" isRequired={true}>
+                      <Input className="my-1">
+                        <InputField
+                          type="text"
+                          placeholder="last name"
+                          value={lastName}
+                          onChangeText={(text) => setLastName(text)}
+                        />
+                      </Input>
+                    </FormControl>
 
-                  <FormControl size="md" isRequired={true}>
-                    <Input className="my-1">
-                      <InputField
-                        type="email"
-                        placeholder="email address"
-                        value={email}
-                        onChangeText={(text) => setEmail(text)}
-                      />
-                    </Input>
-                  </FormControl>
+                    <FormControl size="md" isRequired={true}>
+                      <Input className="my-1">
+                        <InputField
+                          type="email"
+                          placeholder="email address"
+                          value={email}
+                          onChangeText={(text) => setEmail(text)}
+                        />
+                      </Input>
+                    </FormControl>
 
-                  <FormControl size="md" isRequired={true}>
-                    <Input className="my-1">
-                      <InputField
-                        type="password"
-                        placeholder="password"
-                        value={password}
-                        onChangeText={(text) => setPassword(text)}
-                      />
-                    </Input>
-                  </FormControl>
+                    <FormControl size="md" isRequired={true}>
+                      <Input className="my-1">
+                        <InputField
+                          type="password"
+                          placeholder="password"
+                          value={password}
+                          onChangeText={(text) => setPassword(text)}
+                        />
+                      </Input>
+                    </FormControl>
 
-                  {/* Upload Button */}
-                  <TouchableOpacity
-                    style={styles.uploadButton}
-                    onPress={handleSubmit}
-                  >
-                    <Text style={styles.buttonText}>
-                      {loading ? "Updating..." : "Update Info"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    {/* Upload Button */}
+                    <TouchableOpacity
+                      style={styles.uploadButton}
+                      onPress={handleSubmit}
+                    >
+                      <Text style={styles.buttonText}>
+                        {loading ? "Updating..." : "Update Info"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </Card>
           </View>

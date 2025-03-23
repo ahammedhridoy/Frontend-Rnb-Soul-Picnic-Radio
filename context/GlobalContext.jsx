@@ -12,7 +12,8 @@ export const GlobalContextProvider = ({ children }) => {
     try {
       setLoading(true);
       const userData = await AsyncStorage.getItem("user");
-      if (userData) {
+      const parseData = JSON.parse(userData);
+      if (parseData) {
         setUser(JSON.parse(userData));
       } else {
         setUser(null);

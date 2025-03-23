@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,9 @@ import {
   Alert,
   FlatList,
 } from "react-native";
-import { FormControl } from "@/components/ui/form-control";
-import { Input, InputField } from "@/components/ui/input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { router, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Heading } from "@/components/ui/heading";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -26,12 +24,15 @@ import {
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogBackdrop,
+  AlertDialogHeader,
+  AlertDialogBody,
 } from "@/components/ui/alert-dialog";
 import { Textarea, TextareaInput } from "@/components/ui/textarea";
 import * as ImagePicker from "expo-image-picker";
 import Feather from "@expo/vector-icons/Feather";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GlobalContext } from "../../context/GlobalContext";
+import { Button, ButtonText } from "@/components/ui/button";
 const Profile = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [posts, setPosts] = useState([]);
@@ -41,11 +42,8 @@ const Profile = () => {
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
   const { user, setUser, fetchUser } = useContext(GlobalContext);
-  const [firstName, setFirstName] = React.useState(user?.firstName);
-  const [lastName, setLastName] = React.useState(user?.lastName);
-  const [email, setEmail] = React.useState(user?.email);
-  const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+  const [reports, setReports] = useState([]);
+  const [blUsers, setBlUsers] = useState([]);
 
   const [showAlertDialog, setShowAlertDialog] = React.useState(false);
   const handleClose = () => setShowAlertDialog(false);
@@ -53,6 +51,35 @@ const Profile = () => {
   const handleCloseDelete = () => setShowDeleteDialog(false);
   const router = useRouter();
   const [imageUri, setImageUri] = useState(null);
+
+  const [showReportDialog, setShowReportDialog] = React.useState(false);
+  const handleReportClose = () => setShowReportDialog(false);
+
+  const [showBlockDialog, setShowBlockDialog] = React.useState(false);
+  const handleBlockClose = () => setShowBlockDialog(false);
+
+  const [currentUser, setCurrentUser] = React.useState(false);
+
+  // Get single user
+  const getUser = async () => {
+    try {
+      const user = JSON.parse(await AsyncStorage.getItem("user"));
+      const response = await axios.get(
+        `http://192.168.0.104:5000/api/v1/user/single/${user?.id}`
+      );
+      if (response?.status === 200) {
+        setCurrentUser(response?.data.user);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getUser();
+  }, []);
+
+  // if (!user) router.replace("/login");
 
   useEffect(() => {
     const value = 20 + 20 * index;
@@ -77,14 +104,14 @@ const Profile = () => {
 
   // Get posts
   const getUserPosts = async () => {
-    if (!user?.id) {
+    if (!currentUser?.id) {
       console.error("User ID is undefined!");
       return;
     }
 
     try {
       const res = await axios.get(
-        `http://192.168.0.104:5000/api/v1/post/user/${user?.id}`
+        `http://192.168.0.104:5000/api/v1/post/user/${currentUser?.id}`
       );
 
       if (res?.status === 200) {
@@ -98,12 +125,70 @@ const Profile = () => {
     }
   };
 
+  const fetchReports = async () => {
+    try {
+      if (!currentUser?.id) {
+        console.error("User ID is undefined!");
+        return;
+      }
+      const response = await axios.get(
+        `http://192.168.0.104:5000/api/v1/report/user/${currentUser?.id}`
+      );
+
+      if (response?.status === 200) {
+        setReports(response?.data?.reports);
+        return response.data;
+      }
+    } catch (error) {
+      console.error(error.response.message);
+      return [];
+    }
+  };
+
+  const fetchBlockedUsers = async () => {
+    try {
+      if (!currentUser?.id) {
+        console.error("User ID is undefined!");
+        return;
+      }
+
+      const userId = currentUser?.id;
+      const response = await axios.get(
+        `http://192.168.0.104:5000/api/v1/user/blocked/${userId}`
+      );
+
+      console.log("API Response:", response.data);
+
+      if (
+        response?.status === 200 &&
+        Array.isArray(response?.data?.blockedUsers)
+      ) {
+        setBlUsers(response.data.blockedUsers);
+        return response.data.blockedUsers;
+      } else {
+        console.error(
+          "Blocked users is not an array:",
+          response?.data?.blockedUsers
+        );
+        return [];
+      }
+    } catch (error) {
+      console.error(
+        "Error fetching blocked users:",
+        error.response?.data?.message || error.message
+      );
+      return [];
+    }
+  };
+
   // Usage Example (Pass the user ID)
   useEffect(() => {
-    if (user) {
-      getUserPosts(user.id);
+    if (currentUser) {
+      getUserPosts(currentUser.id);
     }
-  }, [user]);
+    fetchReports();
+    fetchBlockedUsers();
+  }, [currentUser]);
 
   // Set Post Id
   const handleSetPostId = (post) => {
@@ -148,14 +233,14 @@ const Profile = () => {
         }
       );
 
-      if (res.status === 200) {
+      if (res?.status === 200) {
         Alert.alert("Post updated successfully");
         setShowAlertDialog(false);
         const userData = res?.data?.user;
         await AsyncStorage.setItem("user", JSON.stringify(userData));
         setUser(userData);
         fetchUser();
-        await getUserPosts(user?.id);
+        await getUserPosts(currentUser?.id);
         setShowAlertDialog(false);
       }
     } catch (error) {
@@ -172,7 +257,7 @@ const Profile = () => {
 
       if (res?.status === 200) {
         Alert.alert("Post deleted successfully");
-        await getUserPosts(user?.id);
+        await getUserPosts(currentUser?.id);
         setShowDeleteDialog(false);
       }
     } catch (error) {
@@ -180,10 +265,29 @@ const Profile = () => {
     }
   };
 
+  // Unblock user
+  const unblockUser = async (unblockUserId) => {
+    try {
+      const response = await axios.post(
+        "http://192.168.0.104:5000/api/v1/user/unblock",
+        {
+          userId: currentUser.id,
+          unblockUserId,
+        }
+      );
+      if (response?.status === 200) {
+        Alert.alert("User unblocked successfully");
+        setShowBlockDialog(false);
+      }
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
+
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
-    getUserPosts(user?.id);
+    getUserPosts(currentUser?.id);
     fetchUser();
     setTimeout(() => {
       setRefreshing(false);
@@ -199,211 +303,341 @@ const Profile = () => {
       ) : (
         <View className="w-full">
           {/* Profile info */}
-          <Card
-            size="md"
-            variant="filled"
-            className="flex gap-2 my-2"
-            style={styles.card}
-          >
-            {/* Settings item */}
-            <View>
-              {/* Post card */}
-
-              {posts && posts.length > 0 && (
-                <>
-                  <FlatList
-                    data={data}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item }) => (
-                      <Card
-                        key={item.index}
+          {currentUser ? (
+            <Card
+              size="md"
+              variant="filled"
+              className="flex gap-2 my-2"
+              style={styles.card}
+            >
+              <View className="flex flex-row ">
+                <TouchableOpacity
+                  onPress={() => setShowReportDialog(true)}
+                  className="flex justify-end mx-auto"
+                >
+                  <Text className="p-2 bg-[#38BF64] text-white rounded">
+                    View Report
+                  </Text>
+                </TouchableOpacity>
+                {/* Report Dialog */}
+                <AlertDialog
+                  isOpen={showReportDialog}
+                  onClose={handleReportClose}
+                  size="md"
+                >
+                  <AlertDialogBackdrop />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <Heading
+                        className="font-semibold text-typography-950"
                         size="md"
-                        variant="filled"
-                        style={styles.card}
                       >
-                        <View className="flex flex-row items-center gap-2">
-                          <TouchableOpacity>
-                            <Avatar size="md">
-                              <AvatarImage
-                                source={{
-                                  uri: `http://192.168.0.104:5000${item?.author?.imageUrl}`,
-                                }}
-                              />
-                            </Avatar>
-                          </TouchableOpacity>
-                          <Heading size="md" className="mb-1">
-                            {item?.author?.firstName} {item?.author?.lastName}
-                          </Heading>
-                        </View>
-                        <View>
-                          {/* Content */}
-                          {item?.text && (
-                            <Text size="sm" className="text-justify">
-                              {item?.text}
-                            </Text>
+                        All Reports
+                      </Heading>
+                    </AlertDialogHeader>
+                    <AlertDialogBody className="mt-3 mb-4">
+                      {reports?.length > 0 ? (
+                        <FlatList
+                          data={reports}
+                          keyExtractor={(item, index) => index.toString()}
+                          renderItem={({ item }) => (
+                            <View className="flex flex-col gap-4 p-2 my-2 rounded-md shadow-md bg-slate-500">
+                              <Text className="mb-2 text-lg text-white">
+                                Reason: {item?.reason}
+                              </Text>
+                              <Text className="mb-2 text-lg text-white">
+                                Status: {item?.reportStatus}
+                              </Text>
+                            </View>
                           )}
-
-                          {/* Image */}
-                          {item?.images && (
-                            <>
-                              {item?.images?.map((image, index) => (
-                                <View className="flex gap-2 mt-2" key={index}>
-                                  <Image
-                                    source={{
-                                      uri: `http://192.168.0.104:5000${image}`,
-                                    }}
-                                    style={styles.postImage}
-                                  />
-                                </View>
-                              ))}
-                            </>
-                          )}
-                        </View>
-
-                        {/* Icon */}
-                        <View className="flex flex-row justify-between gap-2">
-                          {/* Like button */}
-                          <LikeButton
-                            postId={item?.id}
-                            userId={user?.id}
-                            initialLikes={item?.likes}
-                          />
-
-                          <View className="flex flex-row items-center gap-2">
-                            <TouchableOpacity
-                              onPress={() => handleSetPostId(item)}
-                            >
-                              <FontAwesome
-                                name="edit"
-                                size={24}
-                                color="green"
-                              />
-                            </TouchableOpacity>{" "}
-                            <TouchableOpacity
-                              onPress={() => handleSetDeleteId(item)}
-                            >
-                              <MaterialIcons
-                                name="delete-forever"
-                                size={24}
-                                color="red"
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-
-                        {/* Edit Post Dialog */}
-                        <AlertDialog
-                          isOpen={showAlertDialog}
-                          onClose={handleClose}
-                          size="md"
-                        >
-                          <AlertDialogBackdrop />
-                          <AlertDialogContent>
-                            {/* Text Box */}
-                            <Textarea
-                              size="md"
-                              className="flex flex-row items-center w-full p-2"
-                            >
-                              <TextareaInput
-                                onChangeText={setText}
-                                value={text}
-                              />
-                            </Textarea>
-                            {/* Image upload button */}
-                            <TouchableOpacity className="w-12 mt-2">
-                              <Feather
-                                className="p-2 bg-[#38BF64] rounded-full"
-                                name="image"
-                                size={26}
-                                color="white"
-                                onPress={pickImages}
-                              />
-                            </TouchableOpacity>
-                            {/* Post Images */}
-                            {Image && (
-                              <View
-                                className={`flex flex-row flex-wrap items-center justify-center ${
-                                  Image
-                                    ? " rounded-md border-gray-300 mt-2"
-                                    : ""
-                                }`}
-                              >
-                                {imageUris.map((uri, index) => (
-                                  <Image
-                                    key={index}
-                                    source={{ uri }}
-                                    style={{
-                                      width: 100,
-                                      height: 100,
-                                      margin: 5,
-                                    }}
-                                    className="border border-gray-300 rounded-sm"
-                                  />
-                                ))}
-                              </View>
-                            )}
-                            <AlertDialogFooter className="">
-                              <Text
-                                onPress={() => handleEditPost(postId)}
-                                className="p-2 text-white bg-black rounded-md"
-                              >
-                                Update
-                              </Text>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-
-                        {/* Delete Post Dialog */}
-                        <AlertDialog
-                          isOpen={showDeleteDialog}
-                          onClose={handleCloseDelete}
-                          size="md"
-                        >
-                          <AlertDialogBackdrop />
-                          <AlertDialogContent>
-                            {/* Text Box */}
-
-                            <Text>Are you sure you want to delete this?</Text>
-                            <AlertDialogFooter className="mt-2">
-                              <Text
-                                onPress={handleCloseDelete}
-                                className="p-2 text-white bg-black rounded-md"
-                              >
-                                Cancel
-                              </Text>
-                              <Text
-                                onPress={handleDeletePost}
-                                className="p-2 text-white bg-red-500 rounded-md"
-                              >
-                                Delete
-                              </Text>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </Card>
-                    )}
-                    refreshControl={
-                      <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                      />
-                    }
-                    ListFooterComponent={() =>
-                      data.length === posts.length ? (
-                        <Text style={styles.noMoreText}>
-                          No More Posts Available
-                        </Text>
+                        />
                       ) : (
-                        <ActivityIndicator size="large" color="#38BF64" />
-                      )
-                    }
-                    onEndReached={() => setIndex(index + 1)}
-                    onEndReachedThreshold={0.1}
-                  />
-                </>
-              )}
-            </View>
-          </Card>
+                        <View className="flex items-center justify-center">
+                          <Text className="text-lg text-typography-950">
+                            No Reports
+                          </Text>
+                        </View>
+                      )}
+                    </AlertDialogBody>
+                    <AlertDialogFooter className="">
+                      <Button
+                        variant="outline"
+                        action="secondary"
+                        onPress={handleReportClose}
+                        size="sm"
+                      >
+                        <ButtonText>Close</ButtonText>
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <TouchableOpacity
+                  onPress={() => setShowBlockDialog(true)}
+                  className="flex justify-end mx-auto"
+                >
+                  <Text className="p-2 bg-[#38BF64] text-white rounded">
+                    View Blocked User
+                  </Text>
+                </TouchableOpacity>
+                {/* Block Dialog */}
+                <AlertDialog
+                  isOpen={showBlockDialog}
+                  onClose={handleBlockClose}
+                  size="md"
+                >
+                  <AlertDialogBackdrop />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <Heading
+                        className="font-semibold text-typography-950"
+                        size="md"
+                      >
+                        All Blocked Users
+                      </Heading>
+                    </AlertDialogHeader>
+                    <AlertDialogBody className="mt-3 mb-4">
+                      {blUsers?.length > 0 ? (
+                        <FlatList
+                          data={blUsers}
+                          keyExtractor={(item, index) => index.toString()}
+                          renderItem={({ item }) => (
+                            <View className="flex flex-row items-center justify-between gap-4 p-2 my-2 rounded-md shadow-md bg-slate-500">
+                              <Text className="mb-2 text-lg text-white">
+                                Name: {item?.name}
+                              </Text>
+                              <Text
+                                onPress={() => unblockUser(item?.id)}
+                                className="p-2 mb-2 text-lg text-white bg-green-500 rounded-full"
+                              >
+                                Unblock
+                              </Text>
+                            </View>
+                          )}
+                        />
+                      ) : (
+                        <View className="flex items-center justify-center">
+                          <Text className="text-lg text-typography-950">
+                            No Blocked Users Found
+                          </Text>
+                        </View>
+                      )}
+                    </AlertDialogBody>
+                    <AlertDialogFooter className="">
+                      <Button
+                        variant="outline"
+                        action="secondary"
+                        onPress={handleBlockClose}
+                        size="sm"
+                      >
+                        <ButtonText>Close</ButtonText>
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </View>
+              {/* profile item */}
+              <View>
+                {/* Post card */}
+
+                {posts && posts.length > 0 && (
+                  <>
+                    <FlatList
+                      data={data}
+                      keyExtractor={(item, index) => index.toString()}
+                      renderItem={({ item }) => (
+                        <Card
+                          key={item.index}
+                          size="md"
+                          variant="filled"
+                          style={styles.card}
+                        >
+                          <View className="flex flex-row items-center gap-2">
+                            <TouchableOpacity>
+                              <Avatar size="md">
+                                <AvatarImage
+                                  source={{
+                                    uri: `http://192.168.0.104:5000${item?.author?.imageUrl}`,
+                                  }}
+                                />
+                              </Avatar>
+                            </TouchableOpacity>
+                            <Heading size="md" className="mb-1">
+                              {item?.author?.firstName} {item?.author?.lastName}
+                            </Heading>
+                          </View>
+                          <View>
+                            {/* Content */}
+                            {item?.text && (
+                              <Text size="sm" className="text-justify">
+                                {item?.text}
+                              </Text>
+                            )}
+
+                            {/* Image */}
+                            {item?.images && (
+                              <>
+                                {item?.images?.map((image, index) => (
+                                  <View className="flex gap-2 mt-2" key={index}>
+                                    <Image
+                                      source={{
+                                        uri: `http://192.168.0.104:5000${image}`,
+                                      }}
+                                      style={styles.postImage}
+                                    />
+                                  </View>
+                                ))}
+                              </>
+                            )}
+                          </View>
+
+                          {/* Icon */}
+                          <View className="flex flex-row justify-between gap-2">
+                            {/* Like button */}
+                            <LikeButton
+                              postId={item?.id}
+                              userId={user?.id}
+                              initialLikes={item?.likes}
+                            />
+
+                            <View className="flex flex-row items-center gap-2">
+                              <TouchableOpacity
+                                onPress={() => handleSetPostId(item)}
+                              >
+                                <FontAwesome
+                                  name="edit"
+                                  size={24}
+                                  color="green"
+                                />
+                              </TouchableOpacity>{" "}
+                              <TouchableOpacity
+                                onPress={() => handleSetDeleteId(item)}
+                              >
+                                <MaterialIcons
+                                  name="delete-forever"
+                                  size={24}
+                                  color="red"
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+
+                          {/* Edit Post Dialog */}
+                          <AlertDialog
+                            isOpen={showAlertDialog}
+                            onClose={handleClose}
+                            size="md"
+                          >
+                            <AlertDialogBackdrop />
+                            <AlertDialogContent>
+                              {/* Text Box */}
+                              <Textarea
+                                size="md"
+                                className="flex flex-row items-center w-full p-2"
+                              >
+                                <TextareaInput
+                                  onChangeText={setText}
+                                  value={text}
+                                />
+                              </Textarea>
+                              {/* Image upload button */}
+                              <TouchableOpacity className="w-12 mt-2">
+                                <Feather
+                                  className="p-2 bg-[#38BF64] rounded-full"
+                                  name="image"
+                                  size={26}
+                                  color="white"
+                                  onPress={pickImages}
+                                />
+                              </TouchableOpacity>
+                              {/* Post Images */}
+                              {Image && (
+                                <View
+                                  className={`flex flex-row flex-wrap items-center justify-center ${
+                                    Image
+                                      ? " rounded-md border-gray-300 mt-2"
+                                      : ""
+                                  }`}
+                                >
+                                  {imageUris.map((uri, index) => (
+                                    <Image
+                                      key={index}
+                                      source={{ uri }}
+                                      style={{
+                                        width: 100,
+                                        height: 100,
+                                        margin: 5,
+                                      }}
+                                      className="border border-gray-300 rounded-sm"
+                                    />
+                                  ))}
+                                </View>
+                              )}
+                              <AlertDialogFooter className="">
+                                <Text
+                                  onPress={() => handleEditPost(postId)}
+                                  className="p-2 text-white bg-black rounded-md"
+                                >
+                                  Update
+                                </Text>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          {/* Delete Post Dialog */}
+                          <AlertDialog
+                            isOpen={showDeleteDialog}
+                            onClose={handleCloseDelete}
+                            size="md"
+                          >
+                            <AlertDialogBackdrop />
+                            <AlertDialogContent>
+                              {/* Text Box */}
+
+                              <Text>Are you sure you want to delete this?</Text>
+                              <AlertDialogFooter className="mt-2">
+                                <Text
+                                  onPress={handleCloseDelete}
+                                  className="p-2 text-white bg-black rounded-md"
+                                >
+                                  Cancel
+                                </Text>
+                                <Text
+                                  onPress={handleDeletePost}
+                                  className="p-2 text-white bg-red-500 rounded-md"
+                                >
+                                  Delete
+                                </Text>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </Card>
+                      )}
+                      refreshControl={
+                        <RefreshControl
+                          refreshing={refreshing}
+                          onRefresh={onRefresh}
+                        />
+                      }
+                      ListFooterComponent={() =>
+                        data.length === posts.length ? (
+                          <Text style={styles.noMoreText}>
+                            No More Posts Available
+                          </Text>
+                        ) : (
+                          <ActivityIndicator size="large" color="#38BF64" />
+                        )
+                      }
+                      onEndReached={() => setIndex(index + 1)}
+                      onEndReachedThreshold={0.1}
+                    />
+                  </>
+                )}
+              </View>
+            </Card>
+          ) : (
+            <View>Please Logged In.</View>
+          )}
         </View>
       )}
     </SafeAreaView>

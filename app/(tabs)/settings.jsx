@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
-  const { setUser, fetchUser } = useContext(GlobalContext);
+  const { setUser, fetchUser, getPosts } = useContext(GlobalContext);
   const [firstName, setFirstName] = React.useState(currentUser?.firstName);
   const [lastName, setLastName] = React.useState(currentUser?.lastName);
   const [email, setEmail] = React.useState(currentUser?.email);
@@ -83,7 +83,7 @@ const Settings = () => {
     try {
       const user = JSON.parse(await AsyncStorage.getItem("user"));
       const response = await axios.get(
-        `http://192.168.0.104:5000/api/v1/user/single/${user?.id}`
+        `https://api.rnbsouldashboard.com/api/v1/user/single/${user?.id}`
       );
       if (response?.status === 200) {
         setCurrentUser(response?.data.user);
@@ -98,6 +98,7 @@ const Settings = () => {
 
   useEffect(() => {
     getUser();
+    getPosts();
   }, []);
 
   // Update User
@@ -143,7 +144,7 @@ const Settings = () => {
 
     try {
       const response = await axios.patch(
-        `http://192.168.0.104:5000/api/v1/user/update/single/${currentUser?.id}`,
+        `https://api.rnbsouldashboard.com/api/v1/user/update/single/${currentUser?.id}`,
         formData,
         {
           headers: {
@@ -165,6 +166,7 @@ const Settings = () => {
 
         // Fetch user again to ensure the latest data is loaded
         getUser();
+        getPosts();
       }
     } catch (error) {
       console.error(
@@ -183,7 +185,7 @@ const Settings = () => {
 
     try {
       const response = await axios.delete(
-        `http://192.168.0.104:5000/api/v1/user/delete/account/${currentUser?.id}`
+        `https://api.rnbsouldashboard.com/api/v1/user/delete/account/${currentUser?.id}`
       );
 
       if (response?.status === 200) {
@@ -223,6 +225,16 @@ const Settings = () => {
       setRefreshing(false);
     }, 2000);
   };
+
+  if (!currentUser) {
+    return (
+      <View>
+        <Text className="text-center font-bold text-3xl mt-5">
+          Please Logged In!
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -327,7 +339,7 @@ const Settings = () => {
                         <AvatarImage
                           source={{
                             uri: currentUser?.imageUrl
-                              ? `http://192.168.0.104:5000${currentUser?.imageUrl}`
+                              ? `https://api.rnbsouldashboard.com${currentUser?.imageUrl}`
                               : defaultImageUri,
                           }}
                         />

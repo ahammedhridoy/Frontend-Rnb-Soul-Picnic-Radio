@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -37,60 +37,34 @@ const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [text, setText] = useState("");
   const [imageUris, setImageUris] = useState([]);
-  const [posts, setPosts] = useState([]);
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
-  const { user } = useContext(GlobalContext);
+  const {
+    user,
+    blockUser,
+    posts,
+    getPosts,
+    blUsers,
+    // filteredPosts,
+    fetchBlockedUsers,
+  } = useContext(GlobalContext);
   const [showReportDialog, setShowReportDialog] = React.useState(false);
   const handleClose = () => setShowReportDialog(false);
   const [reason, setReason] = useState("");
   const [report, setReport] = useState(null);
   const [showBlockDialog, setShowBlockDialog] = React.useState(false);
   const handleBlockClose = () => setShowBlockDialog(false);
-  const [blockUserId, setBlockUserId] = useState(null);
-  const [blockUserName, setBlockUserName] = useState(null);
   const [currentUser, setCurrentUser] = React.useState(false);
-  const [blUsers, setBlUsers] = useState([]);
 
-  const fetchBlockedUsers = async () => {
-    try {
-      if (!currentUser?.id) {
-        console.error("User ID is undefined!");
-        return;
-      }
+  // console.log("blocked users: ", blUsers);
+  // console.log("report: ", report);
 
-      const userId = currentUser?.id;
-      const response = await axios.get(
-        `http://192.168.0.104:5000/api/v1/user/blocked/${userId}`
-      );
-
-      if (
-        response?.status === 200 &&
-        Array.isArray(response?.data?.blockedUsers)
-      ) {
-        setBlUsers(response.data.blockedUsers);
-        return response.data.blockedUsers;
-      } else {
-        console.error(
-          "Blocked users is not an array:",
-          response?.data?.blockedUsers
-        );
-        return [];
-      }
-    } catch (error) {
-      console.error(
-        "Error fetching blocked users:",
-        error.response?.data?.message || error.message
-      );
-      return [];
-    }
-  };
   // Get single user
   const getUser = async () => {
     try {
       const user = JSON.parse(await AsyncStorage.getItem("user"));
       const response = await axios.get(
-        `http://192.168.0.104:5000/api/v1/user/single/${user?.id}`
+        `https://api.rnbsouldashboard.com/api/v1/user/single/${user?.id}`
       );
       if (response?.status === 200) {
         setCurrentUser(response?.data.user);
@@ -102,7 +76,6 @@ const Home = () => {
 
   useEffect(() => {
     getUser();
-    fetchBlockedUsers();
   }, []);
 
   const router = useRouter();
@@ -116,33 +89,8 @@ const Home = () => {
   // Handle block
   const handleBlockPress = (item) => {
     setShowBlockDialog(true);
-    setBlockUserName(item.author.firstName);
-    setBlockUserId(item.authorId);
-  };
-  const blockUser = async () => {
-    try {
-      const response = await axios.post(
-        "http://192.168.0.104:5000/api/v1/user/block",
-        {
-          userId: currentUser?.id,
-          blockUserId,
-          blockUserName,
-        }
-      );
-
-      if (response?.status === 400) {
-        Alert.alert("User already blocked");
-        setShowBlockDialog(false);
-        return;
-      }
-
-      if (response?.status === 200) {
-        Alert.alert("User blocked successfully");
-        setShowBlockDialog(false);
-      }
-    } catch (error) {
-      console.error("Error blocking user:", error);
-    }
+    blockUser(item?.authorId, item?.author?.firstName);
+    setShowBlockDialog(false);
   };
 
   const pickImages = async () => {
@@ -179,13 +127,14 @@ const Home = () => {
       });
 
       const res = await axios.post(
-        "http://192.168.0.104:5000/api/v1/post/create",
+        "https://api.rnbsouldashboard.com/api/v1/post/create",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (res?.status === 201) {
         getPosts();
+        fetchBlockedUsers();
         setText("");
         setImageUris([]);
         Alert.alert("Post created successfully");
@@ -198,37 +147,15 @@ const Home = () => {
     }
   };
 
-  // Get Posts
-  const getPosts = async () => {
-    try {
-      const res = await axios.get("http://192.168.0.104:5000/api/v1/post/all");
-      if (res?.status === 200) {
-        const filteredPosts = Array.isArray(res?.data?.posts)
-          ? res?.data?.posts.filter(
-              (post) =>
-                !blUsers.some((blockedUser) => blockedUser.id === post.authorId)
-            )
-          : [];
-        setPosts(filteredPosts);
-      }
-    } catch (error) {
-      console.error(
-        "Error fetching posts:",
-        error.response?.data || error.message
-      );
-    }
-  };
-
-  console.log(blUsers);
   // Filter posts excluding blocked users' posts
-  const filteredPosts = Array.isArray(posts)
-    ? posts.filter(
-        (post) =>
-          !blUsers.some((blockedUser) => blockedUser.id === post.authorId)
-      )
-    : [];
+  // Full implementation with safety checks:
+  const blUserId = blUsers?.map((user) => user?.blockedId);
+  const filteredPosts = posts?.filter(
+    (post) => !blUserId.includes(post?.authorId)
+  );
 
-  console.log("Filtered Posts:", JSON.stringify(filteredPosts, null, 2));
+  // console.log(currentUser);
+  // console.log("Filtered Postsss:", filteredPosts);
 
   // Handle report
   const handleReportPress = (item) => {
@@ -242,10 +169,10 @@ const Home = () => {
       if (!currentUser) return console.error("User not logged in.");
       if (!reason) return Alert.alert("Please provide a reason.");
       const response = await axios.post(
-        "http://192.168.0.104:5000/api/v1/report/register",
+        "https://api.rnbsouldashboard.com/api/v1/report/register",
         {
           postId: report.id,
-          reporterId: currentUser.id,
+          reporterId: currentUser?.id,
           reason,
         }
       );
@@ -322,7 +249,7 @@ const Home = () => {
             </View>
           )}
           <FlatList
-            data={posts}
+            data={filteredPosts}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({ item }) => (
               <Card
@@ -337,7 +264,7 @@ const Home = () => {
                       <AvatarImage
                         source={{
                           uri: item?.author?.imageUrl
-                            ? `http://192.168.0.104:5000${item?.author?.imageUrl}`
+                            ? `https://api.rnbsouldashboard.com${item?.author?.imageUrl}`
                             : defaultImageUri,
                         }}
                       />
@@ -353,7 +280,7 @@ const Home = () => {
                 {item?.images?.map((image, index) => (
                   <Image
                     key={index}
-                    source={{ uri: `http://192.168.0.104:5000${image}` }}
+                    source={{ uri: `https://api.rnbsouldashboard.com${image}` }}
                     style={styles.postImage}
                   />
                 ))}

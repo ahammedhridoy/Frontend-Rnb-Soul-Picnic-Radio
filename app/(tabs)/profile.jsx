@@ -41,9 +41,9 @@ const Profile = () => {
   const [imageUris, setImageUris] = useState([]);
   const [index, setIndex] = useState(0);
   const [data, setData] = useState([]);
-  const { user, setUser, fetchUser } = useContext(GlobalContext);
+  const { user, setUser, fetchUser, blUsers, unblockUser, fetchBlockedUsers } =
+    useContext(GlobalContext);
   const [reports, setReports] = useState([]);
-  const [blUsers, setBlUsers] = useState([]);
 
   const [showAlertDialog, setShowAlertDialog] = React.useState(false);
   const handleClose = () => setShowAlertDialog(false);
@@ -60,12 +60,14 @@ const Profile = () => {
 
   const [currentUser, setCurrentUser] = React.useState(false);
 
+  // console.log(blUsers);
+
   // Get single user
   const getUser = async () => {
     try {
       const user = JSON.parse(await AsyncStorage.getItem("user"));
       const response = await axios.get(
-        `http://192.168.0.104:5000/api/v1/user/single/${user?.id}`
+        `https://api.rnbsouldashboard.com/api/v1/user/single/${user?.id}`
       );
       if (response?.status === 200) {
         setCurrentUser(response?.data.user);
@@ -73,6 +75,11 @@ const Profile = () => {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const handleUnblock = (item) => {
+    unblockUser(item?.blockedId);
+    setShowBlockDialog(false);
   };
 
   useEffect(() => {
@@ -111,7 +118,7 @@ const Profile = () => {
 
     try {
       const res = await axios.get(
-        `http://192.168.0.104:5000/api/v1/post/user/${currentUser?.id}`
+        `https://api.rnbsouldashboard.com/api/v1/post/user/${currentUser?.id}`
       );
 
       if (res?.status === 200) {
@@ -132,7 +139,7 @@ const Profile = () => {
         return;
       }
       const response = await axios.get(
-        `http://192.168.0.104:5000/api/v1/report/user/${currentUser?.id}`
+        `https://api.rnbsouldashboard.com/api/v1/report/user/${currentUser?.id}`
       );
 
       if (response?.status === 200) {
@@ -145,49 +152,12 @@ const Profile = () => {
     }
   };
 
-  const fetchBlockedUsers = async () => {
-    try {
-      if (!currentUser?.id) {
-        console.error("User ID is undefined!");
-        return;
-      }
-
-      const userId = currentUser?.id;
-      const response = await axios.get(
-        `http://192.168.0.104:5000/api/v1/user/blocked/${userId}`
-      );
-
-      console.log("API Response:", response.data);
-
-      if (
-        response?.status === 200 &&
-        Array.isArray(response?.data?.blockedUsers)
-      ) {
-        setBlUsers(response.data.blockedUsers);
-        return response.data.blockedUsers;
-      } else {
-        console.error(
-          "Blocked users is not an array:",
-          response?.data?.blockedUsers
-        );
-        return [];
-      }
-    } catch (error) {
-      console.error(
-        "Error fetching blocked users:",
-        error.response?.data?.message || error.message
-      );
-      return [];
-    }
-  };
-
   // Usage Example (Pass the user ID)
   useEffect(() => {
     if (currentUser) {
       getUserPosts(currentUser.id);
     }
     fetchReports();
-    fetchBlockedUsers();
   }, [currentUser]);
 
   // Set Post Id
@@ -196,7 +166,7 @@ const Profile = () => {
     setText(post?.text || "");
     setImageUris(
       post.images
-        ? post.images.map((image) => `http://192.168.0.104:5000${image}`)
+        ? post.images.map((image) => `https://api.rnbsouldashboard.com${image}`)
         : []
     );
     setShowAlertDialog(true);
@@ -224,7 +194,7 @@ const Profile = () => {
       });
 
       const res = await axios.patch(
-        `http://192.168.0.104:5000/api/v1/post/${postId}`,
+        `https://api.rnbsouldashboard.com/api/v1/post/${postId}`,
         formData,
         {
           headers: {
@@ -252,7 +222,7 @@ const Profile = () => {
   const handleDeletePost = async () => {
     try {
       const res = await axios.delete(
-        `http://192.168.0.104:5000/api/v1/post/${postId}`
+        `https://api.rnbsouldashboard.com/api/v1/post/${postId}`
       );
 
       if (res?.status === 200) {
@@ -265,25 +235,6 @@ const Profile = () => {
     }
   };
 
-  // Unblock user
-  const unblockUser = async (unblockUserId) => {
-    try {
-      const response = await axios.post(
-        "http://192.168.0.104:5000/api/v1/user/unblock",
-        {
-          userId: currentUser.id,
-          unblockUserId,
-        }
-      );
-      if (response?.status === 200) {
-        Alert.alert("User unblocked successfully");
-        setShowBlockDialog(false);
-      }
-    } catch (error) {
-      console.error("Error blocking user:", error);
-    }
-  };
-
   // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
@@ -293,6 +244,16 @@ const Profile = () => {
       setRefreshing(false);
     }, 2000);
   };
+
+  if (!currentUser) {
+    return (
+      <View>
+        <Text className="text-center font-bold text-3xl mt-5">
+          Please Logged In!
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -404,10 +365,10 @@ const Profile = () => {
                           renderItem={({ item }) => (
                             <View className="flex flex-row items-center justify-between gap-4 p-2 my-2 rounded-md shadow-md bg-slate-500">
                               <Text className="mb-2 text-lg text-white">
-                                Name: {item?.name}
+                                Name: {item?.blockedName}
                               </Text>
                               <Text
-                                onPress={() => unblockUser(item?.id)}
+                                onPress={() => handleUnblock(item)}
                                 className="p-2 mb-2 text-lg text-white bg-green-500 rounded-full"
                               >
                                 Unblock
@@ -457,7 +418,7 @@ const Profile = () => {
                               <Avatar size="md">
                                 <AvatarImage
                                   source={{
-                                    uri: `http://192.168.0.104:5000${item?.author?.imageUrl}`,
+                                    uri: `https://api.rnbsouldashboard.com${item?.author?.imageUrl}`,
                                   }}
                                 />
                               </Avatar>
@@ -481,7 +442,7 @@ const Profile = () => {
                                   <View className="flex gap-2 mt-2" key={index}>
                                     <Image
                                       source={{
-                                        uri: `http://192.168.0.104:5000${image}`,
+                                        uri: `https://api.rnbsouldashboard.com${image}`,
                                       }}
                                       style={styles.postImage}
                                     />
@@ -496,7 +457,7 @@ const Profile = () => {
                             {/* Like button */}
                             <LikeButton
                               postId={item?.id}
-                              userId={user?.id}
+                              userId={currentUser?.id}
                               initialLikes={item?.likes}
                             />
 

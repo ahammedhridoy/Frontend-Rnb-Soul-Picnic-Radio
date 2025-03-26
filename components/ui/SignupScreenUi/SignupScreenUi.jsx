@@ -40,7 +40,7 @@ const SignupScreenUi = () => {
   const router = useRouter();
 
   const api = axios.create({
-    baseURL: "http://192.168.0.104:5000/api/v1",
+    baseURL: "https://api.rnbsouldashboard.com/api/v1",
     withCredentials: true,
   });
 
@@ -88,6 +88,11 @@ const SignupScreenUi = () => {
           "Content-Type": "application/json",
         },
       });
+
+      if (response?.status === 400) {
+        Alert.alert("User already exists");
+        return;
+      }
 
       if (response?.status === 201) {
         Alert.alert("Success", "User Created Successfully!", [
@@ -247,7 +252,9 @@ const SignupScreenUi = () => {
                   <Text>I agree to the </Text>
                   <TouchableOpacity
                     onPress={() =>
-                      handleOpenURL("https://yourwebsite.com/eula")
+                      handleOpenURL(
+                        "https://www.rnbsoulpicnic.com/terms-conditions"
+                      )
                     }
                   >
                     <Text
@@ -259,7 +266,9 @@ const SignupScreenUi = () => {
                   <Text> and </Text>
                   <TouchableOpacity
                     onPress={() =>
-                      handleOpenURL("https://yourwebsite.com/privacy")
+                      handleOpenURL(
+                        "https://www.rnbsoulpicnic.com/privacy-policy"
+                      )
                     }
                   >
                     <Text
